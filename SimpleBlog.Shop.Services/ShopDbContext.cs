@@ -1,17 +1,13 @@
 using Microsoft.EntityFrameworkCore;
-using SimpleBlog.Blog.Services;
-using SimpleBlog.Shop.Services;
 
-namespace SimpleBlog.ApiService.Data;
+namespace SimpleBlog.Shop.Services;
 
-public class ApplicationDbContext : DbContext
+public class ShopDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    public ShopDbContext(DbContextOptions<ShopDbContext> options) : base(options)
     {
     }
 
-    public DbSet<PostEntity> Posts { get; set; } = null!;
-    public DbSet<CommentEntity> Comments { get; set; } = null!;
     public DbSet<ProductEntity> Products { get; set; } = null!;
     public DbSet<OrderEntity> Orders { get; set; } = null!;
     public DbSet<OrderItemEntity> OrderItems { get; set; } = null!;
@@ -20,26 +16,6 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Post configuration
-        modelBuilder.Entity<PostEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).IsRequired();
-            entity.Property(e => e.Content).IsRequired();
-            entity.Property(e => e.Author).IsRequired();
-            entity.Property(e => e.CreatedAt).IsRequired();
-            entity.HasMany(e => e.Comments).WithOne(c => c.Post!).HasForeignKey(c => c.PostId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<CommentEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Author).IsRequired();
-            entity.Property(e => e.Content).IsRequired();
-            entity.Property(e => e.CreatedAt).IsRequired();
-        });
-
-        // Product configuration
         modelBuilder.Entity<ProductEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -51,7 +27,6 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired();
         });
 
-        // Order configuration
         modelBuilder.Entity<OrderEntity>(entity =>
         {
             entity.HasKey(e => e.Id);

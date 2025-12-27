@@ -8,13 +8,17 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SimpleBlog.ServiceDefaults\SimpleBlog.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Common\SimpleBlog.Common.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Blog.Services\SimpleBlog.Blog.Services.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Shop.Services\SimpleBlog.Shop.Services.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Email.Services\SimpleBlog.Email.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.12">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.11">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

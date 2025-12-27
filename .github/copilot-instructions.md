@@ -1109,3 +1109,280 @@ Tests should be reliable, maintainable, and provide meaningful coverage. Use xUn
             });
     }
     ```
+    
+---
+
+# Instrukcje .NET Aspire dla AI/Copilota
+
+## Role Definition:
+- .NET Aspire Expert
+- Distributed Application Architect
+- DevOps/Deployment Specialist
+
+## Aspire Project Structure & Setup:
+
+### Understanding the Architecture
+- **AppHost Project** (`SimpleBlog.AppHost`): Orchestrates all services, defines deployment topology, manages service discovery
+- **Service Projects** (`SimpleBlog.ApiService`, `SimpleBlog.Web`): Individual microservices or components
+- **ServiceDefaults** (`SimpleBlog.ServiceDefaults`): Shared configuration, telemetry setup, extension methods
+- **Orchestration Pattern**: AppHost defines how services connect, scale, and communicate
+
+### AppHost Configuration Best Practices:
+
+```csharp
+// Good: Clear resource definition with naming and configuration
+var apiService = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("LogLevel__Default", "Information");
+
+var webApp = builder.AddProject<Projects.SimpleBlog_Web>("webfrontend")
+    .WithExternalHttpEndpoints()
+    .WithReference(apiService)  // Service discovery
+    .WaitFor(apiService);        // Startup ordering
+
+builder.Build().Run();
+
+// Avoid: Hardcoded URLs or missing service references
+// Don't use: client.BaseAddress = new("http://localhost:5000");
+// Instead: Use service names for discovery: "https+http://apiservice"
+```
+
+### Service Discovery & Communication:
+
+```csharp
+// ApiService registration (in AppHost)
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
+    .WithExternalHttpEndpoints();
+
+// Web service connects to API (in Web/Program.cs)
+builder.Services.AddHttpClient("ApiService", client =>
+{
+    // "https+http" allows fallback from HTTPS to HTTP in development
+    client.BaseAddress = new("https+http://apiservice");
+});
+
+// Good: Using Aspire service discovery
+// Service name matches AppHost registration name
+// Automatic environment variable injection for connection strings
+```
+
+### External Endpoints & Port Binding:
+
+```csharp
+// Expose service to external clients (from AppHost)
+builder.AddProject<Projects.SimpleBlog_Web>("webfrontend")
+    .WithExternalHttpEndpoints();  // Allows access from localhost:port
+
+// For databases or internal-only services
+builder.AddSqlite("mydb")
+    .WithDataVolume();  // No WithExternalHttpEndpoints - internal only
+```
+
+## Database Setup with Aspire:
+
+### SQLite Configuration (Current Setup):
+
+```csharp
+// In ApiService/Program.cs
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite("Data Source=simpleblog.db"));
+
+// Database initialization
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.EnsureCreated();  // For development without migrations
+    
+    // Seed data if needed
+    if (!db.Posts.Any())
+    {
+        // Add seed data
+    }
+}
+
+// Good: EnsureCreated() for rapid dev iteration
+// For production: Use migrations with db.Database.Migrate()
+```
+
+### Database as Aspire Resource:
+
+```csharp
+// In AppHost/Program.cs (recommended pattern)
+var db = builder.AddSqlite("blogdb")
+    .WithDataVolume("blog-data");
+
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
+    .WithReference(db);  // Injects connection string automatically
+
+// Then in ApiService, use:
+// builder.Services.AddDbContext<ApplicationDbContext>();
+// Aspire auto-wires the connection string
+```
+
+## Health Checks & Monitoring:
+
+```csharp
+// In ServiceDefaults/Extensions.cs - typical health check setup
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>();
+
+// In Program.cs (both Api and Web)
+app.MapHealthChecks("/health");
+
+// AppHost sees health status in Dashboard automatically
+```
+
+## Environment Variables & Configuration:
+
+```csharp
+// In AppHost - setting environment variables
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithEnvironment("LogLevel__Microsoft", "Warning");
+
+// In service appsettings.json
+{
+  "ConnectionStrings": {
+    // Aspire injects these automatically via service references
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
+```
+
+## Logging & Distributed Tracing:
+
+```csharp
+// In ServiceDefaults - setup observability
+builder.AddServiceDefaults();  // Adds logging, tracing, metrics
+
+// Services automatically log to:
+// - Console (visible in AppHost/Aspire Dashboard)
+// - Distributed tracing (visible in Dashboard)
+// - Metrics collection
+
+// In Program.cs of each service
+builder.Services.AddServiceDefaults();
+```
+
+## Development vs. Production Considerations:
+
+```csharp
+// AppHost configuration for different environments
+
+// Development: Local testing, rapid iteration
+var builder = DistributedApplication.CreateBuilder(args);
+// Use SQLite for dev, add detailed logging
+
+// Production: Deployed to cloud/orchestrator
+// - Use managed databases (Azure SQL, RDS)
+// - Use container registries
+// - Add resource constraints
+// - Configure proper networking
+
+// Pattern
+if (builder.ExecutionContext.IsPublishMode)
+{
+    // Production-only configuration
+    // Use Azure SQL instead of SQLite
+    // Use managed secrets
+}
+else
+{
+    // Development configuration
+    // Local SQLite, loose CORS, verbose logging
+}
+```
+
+## Common Aspire Patterns:
+
+### Adding External Resources:
+```csharp
+// Redis cache
+var cache = builder.AddRedis("cache");
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("api")
+    .WithReference(cache);
+
+// PostgreSQL database
+var postgres = builder.AddPostgres("postgres")
+    .AddDatabase("blog");
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("api")
+    .WithReference(postgres);
+
+// Environment variables and parameters
+var apiKey = builder.AddParameter("api-key");
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("api")
+    .WithEnvironment("ApiKey", apiKey);
+```
+
+### Startup Dependencies:
+```csharp
+// Ensure proper startup order
+var db = builder.AddSqlite("mydb");
+var api = builder.AddProject<Projects.SimpleBlog_ApiService>("api")
+    .WithReference(db)
+    .WaitFor(db);  // API waits for DB to be ready
+
+var web = builder.AddProject<Projects.SimpleBlog_Web>("web")
+    .WithReference(api)
+    .WaitFor(api);  // Web waits for API
+```
+
+## Testing & Local Development:
+
+### Running Locally:
+```powershell
+# Full application
+dotnet run --project SimpleBlog.AppHost
+
+# Just a service (for focused testing)
+dotnet run --project SimpleBlog.ApiService
+
+# Dashboard is available at https://localhost:17185
+# View logs, traces, and metrics in real-time
+```
+
+### Troubleshooting:
+
+```csharp
+// Port conflicts: Change in launchSettings.json
+{
+  "profiles": {
+    "https": {
+      "applicationUrl": "https://localhost:7999;http://localhost:5999"
+    }
+  }
+}
+
+// Service discovery issues: Check connection strings in Environment variables
+// Missing health checks: Add to health checks in ServiceDefaults
+// Database not created: Use EnsureCreated() or run migrations
+```
+
+## CI/CD Considerations:
+
+```yaml
+# GitHub Actions - Build and test with Aspire
+- name: Build solution
+  run: dotnet build SimpleBlog.sln
+
+- name: Run tests
+  run: dotnet test SimpleBlog.sln --no-build
+
+# For deployment: Build container images from each service
+# Orchestrate with Kubernetes, Docker Compose, or cloud platform
+```
+
+## Key Rules for AI Modifications:
+
+1. **Service References**: Always use service names in `AddHttpClient` - never hardcode URLs
+2. **Connection Strings**: Let Aspire inject them via `WithReference()` - don't hardcode
+3. **Health Checks**: Add health checks for all services so Aspire Dashboard shows status
+4. **Logging**: Services should integrate with ServiceDefaults logging
+5. **Startup Order**: Use `WaitFor()` to ensure proper initialization sequence
+6. **Secrets**: Use `AddParameter()` or Azure Key Vault integration - never commit secrets
+7. **Ports**: Let Aspire manage ports dynamically - reference in code, not hardcoded
+8. **Database**: For dev use `EnsureCreated()`, for prod use migrations with `Migrate()`
