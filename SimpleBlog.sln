@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleBlog.Web", "SimpleBlo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleBlog.Tests", "SimpleBlog.Tests\SimpleBlog.Tests.csproj", "{52B37E93-38CE-4205-A6D4-0B59702B44E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleBlog.Common.Api", "SimpleBlog.Common.Api\SimpleBlog.Common.Api.csproj", "{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{52B37E93-38CE-4205-A6D4-0B59702B44E3}.Release|x64.Build.0 = Release|Any CPU
 		{52B37E93-38CE-4205-A6D4-0B59702B44E3}.Release|x86.ActiveCfg = Release|Any CPU
 		{52B37E93-38CE-4205-A6D4-0B59702B44E3}.Release|x86.Build.0 = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|x64.Build.0 = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Debug|x86.Build.0 = Debug|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|x64.ActiveCfg = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|x64.Build.0 = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|x86.ActiveCfg = Release|Any CPU
+		{A2CD10C6-A4ED-41EC-8B1C-413C73F8C86C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

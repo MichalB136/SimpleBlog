@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SimpleBlog.ServiceDefaults\SimpleBlog.ServiceDefaults.csproj" />
     <ProjectReference Include="..\SimpleBlog.Common\SimpleBlog.Common.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Common.Api\SimpleBlog.Common.Api.csproj" />
     <ProjectReference Include="..\SimpleBlog.Blog.Services\SimpleBlog.Blog.Services.csproj" />
     <ProjectReference Include="..\SimpleBlog.Shop.Services\SimpleBlog.Shop.Services.csproj" />
     <ProjectReference Include="..\SimpleBlog.Email.Services\SimpleBlog.Email.Services.csproj" />

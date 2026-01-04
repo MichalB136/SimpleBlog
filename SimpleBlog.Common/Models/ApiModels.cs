@@ -1,4 +1,4 @@
-namespace SimpleBlog.Common;
+namespace SimpleBlog.Common.Models;
 
 // User model
 public record User(string Username, string Password, string Role);
