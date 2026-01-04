@@ -1,10 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Add SQL Server resource
-var sqlServer = builder.AddSqlServer("sqlserver")
+// PostgreSQL database
+var postgres = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent);
 
-var blogDb = sqlServer.AddDatabase("blogdb");
+var blogDb = postgres.AddDatabase("blogdb");
 
 var apiService = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
     .WithExternalHttpEndpoints()
@@ -16,4 +16,4 @@ builder.AddProject<Projects.SimpleBlog_Web>("webfrontend")
     .WithReference(apiService)
     .WaitFor(apiService);
 
-builder.Build().Run();
+await builder.Build().RunAsync();

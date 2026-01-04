@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.env
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -21,16 +22,33 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
-x64/
-x86/
+
+[Dd]ebug/x64/
+[Dd]ebugPublic/x64/
+[Rr]elease/x64/
+[Rr]eleases/x64/
+bin/x64/
+obj/x64/
+
+[Dd]ebug/x86/
+[Dd]ebugPublic/x86/
+[Rr]elease/x86/
+[Rr]eleases/x86/
+bin/x86/
+obj/x86/
+
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
+[Aa][Rr][Mm]64[Ee][Cc]/
 bld/
-[Bb]in/
 [Oo]bj/
+[Oo]ut/
 [Ll]og/
 [Ll]ogs/
+
+# Build results on 'Bin' directories
+**/[Bb]in/*
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -41,11 +59,15 @@ Generated\ Files/
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+*.trx
 
 # NUnit
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Approval Tests result files
+*.received.*
 
 # Build Results of an ATL Project
 [Dd]ebugPS/
@@ -69,13 +91,16 @@ StyleCopReport.xml
 # Files built by Visual Studio
 *_i.c
 *_p.c
-*_h.h
-*.ilk
-*.meta
-*.obj
+*_hdb
 *.iobj
 *.pch
 *.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+# but not Directory.Build.rsp, as it configures directory-level build defaults
+!Directory.Build.pdb
 *.ipdb
 *.pgc
 *.pgd
@@ -148,7 +173,8 @@ coverage*.info
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
-
+NCrunch_*
+.
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml
@@ -242,12 +268,10 @@ UpgradeLog*.htm
 ServiceFabricBackup/
 *.rptproj.bak
 
-# SQL Server files
-*.mdf
-*.ldf
-*.ndf
-App_Data/*.mdf
-App_Data/*.ldf
+# Database files
+*.db
+*.db-shm
+*.db-wal
 
 # Business Intelligence projects
 *.rdl.data
@@ -313,15 +337,19 @@ __pycache__/
 # OpenCover UI analysis results
 OpenCover/
 
-# Azure Stream Analytics local run output
+# Azure 
+MSBuild_Logs/
+
+# AWS SAM Build and Temporary Artifacts folder
+.aws-samStream Analytics local run output
 ASALocalRun/
 
 # MSBuild Binary and Structured Log
 *.binlog
+**/.mfractor/
 
-# NVidia Nsight GPU debugger configuration file
-*.nvuser
-
+# Local History for Visual Studio
+**/
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
 
@@ -343,18 +371,21 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# VS Code files
+# VS Code files for those working on multiple tools
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-*.code-workspace
+!.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
 .history/
 
-# Windows Installer files
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Windows Installer files from build outputs
 *.cab
 *.msi
 *.msix
@@ -373,8 +404,11 @@ FodyWeavers.xsd
 # .NET Aspire
 .aspire/
 
-# Environment variables
-.env
+# Environment variables (*.env already defined in User-specific files section above)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.local
 .env.development.local
 .env.test.local

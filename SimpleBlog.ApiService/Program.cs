@@ -1,22 +1,26 @@
-using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
+using SimpleBlog.ApiService;
 using SimpleBlog.ApiService.Data;
 using SimpleBlog.Blog.Services;
 using SimpleBlog.Shop.Services;
 using SimpleBlog.Email.Services;
 using SimpleBlog.Common;
-using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+
+// Configure Kestrel to bind to Render's PORT environment variable if present
+if (Environment.GetEnvironmentVariable("PORT") is string port)
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
@@ -26,10 +30,13 @@ builder.Services.AddLogging();
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
-    // Limit CORS for development
+    // Configure CORS based on environment
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+        ?? new[] { "http://localhost:5080", "http://localhost:7166", "https://localhost:7166" };
+    
     options.AddPolicy("AllowDevClients", policy =>
         policy
-            .WithOrigins("http://localhost:5080", "http://localhost:7166", "https://localhost:7166")
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
@@ -56,7 +63,6 @@ builder.Services.AddAuthentication(options =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError("JWT Authentication failed: {Error}", context.Exception.Message);
-            logger.LogError("Token: {Token}", context.Request.Headers["Authorization"].ToString().Substring(0, Math.Min(50, context.Request.Headers["Authorization"].ToString().Length)));
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
@@ -82,27 +88,28 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// EF Core - SQL Server (connection string injected by Aspire)
-// Health checks are automatically added by AddSqlServerDbContext
-builder.AddSqlServerDbContext<ApplicationDbContext>("blogdb");
+// EF Core - PostgreSQL (both local Aspire and Render deployment)
+builder.AddNpgsqlDbContext<ApplicationDbContext>("blogdb");
 
 // Register DbContext aliases for repositories
 builder.Services.AddScoped<BlogDbContext>(sp => 
 {
     var appDb = sp.GetRequiredService<ApplicationDbContext>();
+    var connStr = appDb.Database.GetConnectionString();
     var options = new DbContextOptionsBuilder<BlogDbContext>()
-        .UseSqlServer(appDb.Database.GetConnectionString())
-        .Options;
-    return new BlogDbContext(options);
+        .UseNpgsql(connStr);
+    
+    return new BlogDbContext(options.Options);
 });
 
 builder.Services.AddScoped<ShopDbContext>(sp => 
 {
     var appDb = sp.GetRequiredService<ApplicationDbContext>();
+    var connStr = appDb.Database.GetConnectionString();
     var options = new DbContextOptionsBuilder<ShopDbContext>()
-        .UseSqlServer(appDb.Database.GetConnectionString())
-        .Options;
-    return new ShopDbContext(options);
+        .UseNpgsql(connStr);
+    
+    return new ShopDbContext(options.Options);
 });
 
 // Register repositories from service layers
@@ -121,10 +128,10 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         // Ensure database exists (creates if missing, does nothing if exists)
-        db.Database.EnsureCreated();
+        await db.Database.EnsureCreatedAsync();
 
         // Seed initial data if database is empty
-        if (!db.Posts.Any())
+        if (!await db.Posts.AnyAsync())
         {
             var now = DateTimeOffset.UtcNow;
             
@@ -134,9 +141,9 @@ using (var scope = app.Services.CreateScope())
                 Id = Guid.NewGuid(), 
                 Title = "Witaj w SimpleBlog!", 
                 Content = "Twój nowy blog oparty na .NET Aspire i React jest gotowy! 🚀\n\nSimpleBlog to nowoczesna platforma blogowa, która łączy w sobie moc backendu .NET z dynamicznym frontendem React. Ciesz się szybkim prototypowaniem i skalowalnością.", 
-                Author = "System", 
+                Author = SeedDataConstants.SystemUsername, 
                 CreatedAt = now.AddDays(-7),
-                ImageUrl = "https://picsum.photos/seed/blog1/800/400"
+                ImageUrl = null
             };
             
             // Post 2 - bez obrazu
@@ -145,7 +152,7 @@ using (var scope = app.Services.CreateScope())
                 Id = Guid.NewGuid(), 
                 Title = "Przewodnik po funkcjach", 
                 Content = "SimpleBlog oferuje wiele funkcji:\n\n✨ Tworzenie i edycja postów\n💬 System komentarzy\n🖼️ Wsparcie dla obrazów\n🌓 Tryb jasny i ciemny\n🔐 Uwierzytelnianie JWT\n📱 Responsywny design\n\nWszystko to w jednej, lekkiej aplikacji!", 
-                Author = "Admin", 
+                Author = SeedDataConstants.AdminUsername, 
                 CreatedAt = now.AddDays(-5)
             };
             
@@ -157,7 +164,7 @@ using (var scope = app.Services.CreateScope())
                 Content = "SimpleBlog wykorzystuje najnowsze technologie:\n\n🔹 Backend: .NET 9.0 z Aspire\n🔹 Frontend: React 18.3 + Bootstrap 5\n🔹 Baza danych: SQLite z Entity Framework Core\n🔹 Autoryzacja: JWT Bearer tokens\n🔹 API: Minimal APIs\n\nWszystko zoptymalizowane pod kątem wydajności i łatwości rozwoju.", 
                 Author = "Tech Team", 
                 CreatedAt = now.AddDays(-4),
-                ImageUrl = "https://picsum.photos/seed/tech2/800/400"
+                ImageUrl = null
             };
             
             // Post 4 - z obrazem
@@ -168,7 +175,7 @@ using (var scope = app.Services.CreateScope())
                 Content = "W świecie developmentu każdy dzień przynosi nowe wyzwania i możliwości. Od debugowania zagadkowych błędów po moment eureki, gdy kod wreszcie działa - to podróż pełna emocji.\n\nProgramowanie to nie tylko kod, to sztuka rozwiązywania problemów i tworzenia czegoś z niczego.", 
                 Author = "CodePoet", 
                 CreatedAt = now.AddDays(-3),
-                ImageUrl = "https://picsum.photos/seed/nature3/800/400"
+                ImageUrl = null
             };
             
             // Post 5 - bez obrazu
@@ -189,7 +196,7 @@ using (var scope = app.Services.CreateScope())
                 Content = "Mikrousługi to nie srebrna kula, ale potężne narzędzie w odpowiednich rękach.\n\n.NET Aspire ułatwia orkiestrację usług, zapewniając:\n- Service discovery\n- Health checks\n- Distributed tracing\n- Centralized configuration\n\nTo zmienia zasady gry w budowaniu skalowalnych aplikacji!", 
                 Author = "Architect", 
                 CreatedAt = now.AddDays(-1),
-                ImageUrl = "https://picsum.photos/seed/architecture4/800/400"
+                ImageUrl = null
             };
             
             // Post 7 - bez obrazu
@@ -203,7 +210,7 @@ using (var scope = app.Services.CreateScope())
             };
             
             db.Posts.AddRange(p1, p2, p3, p4, p5, p6, p7);
-            db.SaveChanges();
+            await db.SaveChangesAsync();
             
             // Dodaj przykładowe komentarze
             var c1 = new CommentEntity 
@@ -243,11 +250,11 @@ using (var scope = app.Services.CreateScope())
             };
             
             db.Comments.AddRange(c1, c2, c3, c4);
-            db.SaveChanges();
+            await db.SaveChangesAsync();
         }
 
         // Seed products if empty
-        if (!db.Products.Any())
+        if (!await db.Products.AnyAsync())
         {
             var now = DateTimeOffset.UtcNow;
             
@@ -259,8 +266,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Koszulka SimpleBlog",
                     Description = "Premium koszulka bawełniana z logo SimpleBlog. Dostępna w różnych rozmiarach.",
                     Price = 79.99m,
-                    ImageUrl = "https://picsum.photos/seed/tshirt1/400/400",
-                    Category = "Odzież",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryClothing,
                     Stock = 50,
                     CreatedAt = now
                 },
@@ -270,8 +277,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Kubek programisty",
                     Description = "Kubek ceramiczny z motywacyjnym cytatem. Idealny do porannej kawy podczas kodowania.",
                     Price = 39.99m,
-                    ImageUrl = "https://picsum.photos/seed/mug1/400/400",
-                    Category = "Akcesoria",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryAccessories,
                     Stock = 100,
                     CreatedAt = now
                 },
@@ -281,8 +288,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Notatnik developerski",
                     Description = "Notatnik w linie z twardą okładką. Idealny do szkicowania architektury i robienia notatek.",
                     Price = 29.99m,
-                    ImageUrl = "https://picsum.photos/seed/notebook1/400/400",
-                    Category = "Biuro",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryOffice,
                     Stock = 75,
                     CreatedAt = now
                 },
@@ -292,8 +299,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Naklejki kodu",
                     Description = "Zestaw 20 naklejek z motywami programistycznymi. Ozdobnymi laptop lub inne gadżety!",
                     Price = 19.99m,
-                    ImageUrl = "https://picsum.photos/seed/stickers1/400/400",
-                    Category = "Akcesoria",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryAccessories,
                     Stock = 150,
                     CreatedAt = now
                 },
@@ -303,8 +310,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Bluza z kapturem",
                     Description = "Ciepła bluza z logo SimpleBlog. Idealna na długie noce kodowania.",
                     Price = 149.99m,
-                    ImageUrl = "https://picsum.photos/seed/hoodie1/400/400",
-                    Category = "Odzież",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryClothing,
                     Stock = 30,
                     CreatedAt = now
                 },
@@ -314,8 +321,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Mata pod mysz",
                     Description = "Duża mata pod mysz z logo SimpleBlog. Antypoślizgowa powierzchnia.",
                     Price = 49.99m,
-                    ImageUrl = "https://picsum.photos/seed/mousepad1/400/400",
-                    Category = "Biuro",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryOffice,
                     Stock = 60,
                     CreatedAt = now
                 },
@@ -325,8 +332,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Klawiatura mechaniczna RGB",
                     Description = "Profesjonalna klawiatura mechaniczna z podświetleniem RGB. Przełączniki Cherry MX Blue.",
                     Price = 399.99m,
-                    ImageUrl = "https://picsum.photos/seed/keyboard1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 25,
                     CreatedAt = now
                 },
@@ -336,8 +343,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Mysz gamingowa",
                     Description = "Mysz optyczna 16000 DPI z programowalnymi przyciskami. Ergonomiczny design.",
                     Price = 199.99m,
-                    ImageUrl = "https://picsum.photos/seed/mouse1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 40,
                     CreatedAt = now
                 },
@@ -347,8 +354,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Plecak na laptopa",
                     Description = "Wodoodporny plecak z kieszenią na laptopa do 17 cali. Wiele przegródek organizacyjnych.",
                     Price = 179.99m,
-                    ImageUrl = "https://picsum.photos/seed/backpack1/400/400",
-                    Category = "Akcesoria",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryAccessories,
                     Stock = 45,
                     CreatedAt = now
                 },
@@ -358,8 +365,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Słuchawki bezprzewodowe",
                     Description = "Słuchawki Bluetooth z aktywną redukcją szumów. Do 30h odtwarzania.",
                     Price = 299.99m,
-                    ImageUrl = "https://picsum.photos/seed/headphones1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 35,
                     CreatedAt = now
                 },
@@ -369,8 +376,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Stojak pod laptopa",
                     Description = "Aluminiowy stojak ergonomiczny. Regulowana wysokość, doskonała wentylacja.",
                     Price = 89.99m,
-                    ImageUrl = "https://picsum.photos/seed/stand1/400/400",
-                    Category = "Biuro",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryOffice,
                     Stock = 55,
                     CreatedAt = now
                 },
@@ -380,8 +387,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Lampka LED na USB",
                     Description = "Elastyczna lampka LED zasilana przez USB. Idealna do pracy wieczorem.",
                     Price = 34.99m,
-                    ImageUrl = "https://picsum.photos/seed/lamp1/400/400",
-                    Category = "Biuro",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryOffice,
                     Stock = 80,
                     CreatedAt = now
                 },
@@ -391,8 +398,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Koszulka 'Hello World'",
                     Description = "Kultowa koszulka z napisem Hello World. Must-have dla każdego programisty!",
                     Price = 69.99m,
-                    ImageUrl = "https://picsum.photos/seed/tshirt2/400/400",
-                    Category = "Odzież",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryClothing,
                     Stock = 70,
                     CreatedAt = now
                 },
@@ -402,8 +409,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Podkładka chłodząca",
                     Description = "Aktywna podkładka chłodząca pod laptopa z 4 wentylatorami. 2x USB.",
                     Price = 129.99m,
-                    ImageUrl = "https://picsum.photos/seed/cooler1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 28,
                     CreatedAt = now
                 },
@@ -413,8 +420,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Bidon termiczny",
                     Description = "Bidon stalowy 500ml. Utrzymuje temperaturę przez 12h. Logo SimpleBlog.",
                     Price = 59.99m,
-                    ImageUrl = "https://picsum.photos/seed/bottle1/400/400",
-                    Category = "Akcesoria",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryAccessories,
                     Stock = 90,
                     CreatedAt = now
                 },
@@ -424,8 +431,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Poduszka pod nadgarstek",
                     Description = "Memory foam poduszka pod nadgarstek. Redukuje zmęczenie podczas długiej pracy.",
                     Price = 44.99m,
-                    ImageUrl = "https://picsum.photos/seed/wristrest1/400/400",
-                    Category = "Biuro",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryOffice,
                     Stock = 65,
                     CreatedAt = now
                 },
@@ -435,8 +442,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Powerbank 20000mAh",
                     Description = "Mocny powerbank z szybkim ładowaniem USB-C i Qi wireless charging.",
                     Price = 159.99m,
-                    ImageUrl = "https://picsum.photos/seed/powerbank1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 42,
                     CreatedAt = now
                 },
@@ -446,8 +453,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Czapka SimpleBlog",
                     Description = "Bawełniana czapka z daszkiem. Haftowane logo SimpleBlog. Regulowany rozmiar.",
                     Price = 54.99m,
-                    ImageUrl = "https://picsum.photos/seed/cap1/400/400",
-                    Category = "Odzież",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryClothing,
                     Stock = 48,
                     CreatedAt = now
                 },
@@ -457,8 +464,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Hub USB-C 7w1",
                     Description = "Uniwersalny hub USB-C: 3x USB 3.0, HDMI 4K, SD/microSD, USB-C PD 100W.",
                     Price = 189.99m,
-                    ImageUrl = "https://picsum.photos/seed/hub1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 32,
                     CreatedAt = now
                 },
@@ -468,8 +475,8 @@ using (var scope = app.Services.CreateScope())
                     Name = "Skarpety programisty",
                     Description = "Kolorowe skarpety z motywami kodu. Zestaw 3 pary. 80% bawełna.",
                     Price = 39.99m,
-                    ImageUrl = "https://picsum.photos/seed/socks1/400/400",
-                    Category = "Odzież",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryClothing,
                     Stock = 120,
                     CreatedAt = now
                 },
@@ -479,15 +486,15 @@ using (var scope = app.Services.CreateScope())
                     Name = "Kabel USB-C premium",
                     Description = "Wzmocniony kabel USB-C 2m. Szybkie ładowanie 100W i transfer danych 40Gbps.",
                     Price = 49.99m,
-                    ImageUrl = "https://picsum.photos/seed/cable1/400/400",
-                    Category = "Elektronika",
+                    ImageUrl = null,
+                    Category = SeedDataConstants.CategoryElectronics,
                     Stock = 95,
                     CreatedAt = now
                 }
             };
             
             db.Products.AddRange(seedProducts);
-            db.SaveChanges();
+            await db.SaveChangesAsync();
         }
     }
     catch (Exception ex)
@@ -564,14 +571,10 @@ posts.MapGet("/{id:guid}", (Guid id, IPostRepository repository) =>
 
 posts.MapPost(string.Empty, (CreatePostRequest request, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    logger.LogInformation("POST /posts endpoint called");
-    logger.LogInformation("User authenticated: {IsAuthenticated}", context.User.Identity?.IsAuthenticated);
-    logger.LogInformation("User name: {UserName}", context.User.Identity?.Name);
-    logger.LogInformation("User roles: {Roles}", string.Join(", ", context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)));
-    logger.LogInformation("Authorization header present: {HasAuth}", context.Request.Headers.ContainsKey("Authorization"));
+    logger.LogInformation("POST /posts called by {UserName}", context.User.Identity?.Name);
     
     // Require admin role to create posts
-    if (!context.User.IsInRole("Admin"))
+    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
         return Results.Forbid();
@@ -612,7 +615,7 @@ posts.MapPut("/{id:guid}", (Guid id, UpdatePostRequest request, IPostRepository 
 posts.MapDelete("/{id:guid}", (Guid id, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
     // Require admin role to delete posts
-    if (!context.User.IsInRole("Admin"))
+    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized delete attempt for post: {PostId}", id);
         return Results.Forbid();
@@ -671,7 +674,7 @@ products.MapGet("/{id:guid}", (Guid id, IProductRepository repository) =>
 
 products.MapPost(string.Empty, (CreateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole("Admin"))
+    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("User {UserName} attempted to create product without Admin role", context.User.Identity?.Name);
         return Results.Forbid();
@@ -689,7 +692,7 @@ products.MapPost(string.Empty, (CreateProductRequest request, IProductRepository
 
 products.MapPut("/{id:guid}", (Guid id, UpdateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole("Admin"))
+    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized update attempt for product: {ProductId}", id);
         return Results.Forbid();
@@ -708,7 +711,7 @@ products.MapPut("/{id:guid}", (Guid id, UpdateProductRequest request, IProductRe
 
 products.MapDelete("/{id:guid}", (Guid id, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole("Admin"))
+    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized delete attempt for product: {ProductId}", id);
         return Results.Forbid();
@@ -780,23 +783,4 @@ orders.MapPost(string.Empty, async (CreateOrderRequest request, IOrderRepository
 
 app.MapDefaultEndpoints();
 
-app.Run();
-
-// Local implementations
-sealed class InMemoryUserRepository : SimpleBlog.Common.IUserRepository
-{
-    private readonly Dictionary<string, (string Password, string Role)> _users = new()
-    {
-        ["admin"] = ("admin123", "Admin"),
-        ["user"] = ("user123", "User")
-    };
-
-    public SimpleBlog.Common.User? ValidateUser(string username, string password)
-    {
-        if (_users.TryGetValue(username, out var userInfo) && userInfo.Password == password)
-        {
-            return new SimpleBlog.Common.User(username, string.Empty, userInfo.Role);
-        }
-        return null;
-    }
-}
+await app.RunAsync();

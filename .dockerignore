@@ -1,0 +1,60 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE and editor files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Package manager files
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Environment files (sensitive)
+.env
+.env.local
+*.secrets.json
+
+# Aspire specific
+SimpleBlog.AppHost/
+*.AppHost.csproj
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
