@@ -1,0 +1,76 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: simpleblog-db
+    env: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./docker/postgres/Dockerfile
+    dockerContext: ./docker/postgres
+    envVars:
+      - key: POSTGRES_DB
+        value: simpleblog
+      - key: POSTGRES_USER
+        generateValue: true
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+    disk:
+      name: simpleblog-db-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10
+
+  # API Service
+  - type: web
+    name: simpleblog-api
+    env: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./SimpleBlog.ApiService/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__Provider
+        value: postgresql
+      - key: ConnectionStrings__Default
+        fromDatabase:
+          name: simpleblog-db
+          property: connectionString
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: SimpleBlog
+      - key: Jwt__Audience
+        value: SimpleBlog
+      - key: Cors__AllowedOrigins__0
+        fromService:
+          type: web
+          name: simpleblog-web
+          property: host
+    autoDeploy: true
+
+  # Web Frontend Service
+  - type: web
+    name: simpleblog-web
+    env: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./SimpleBlog.Web/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: simpleblog-api
+          envVarKey: RENDER_EXTERNAL_URL
+    autoDeploy: true
+
+databases:
+  - name: simpleblog-db
+    databaseName: simpleblog
+    plan: starter
+    region: frankfurt

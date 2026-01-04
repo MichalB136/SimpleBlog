@@ -2,91 +2,121 @@
 
 Welcome to SimpleBlog documentation! All guides are organized below.
 
-## 📚 Quick Navigation
+## 📚 Documentation
 
 ### Getting Started
-- **[DATABASES.md](DATABASES.md)** - Main database index and navigation guide
-- **[DOCKER_CHEATSHEET.md](DOCKER_CHEATSHEET.md)** - One-page quick reference card
-- **[DOCKER_QUICK_START.md](DOCKER_QUICK_START.md)** - 30-second setup guide
+- **[DATABASES.md](DATABASES.md)** - PostgreSQL setup and configuration guide
+- **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)** - Production deployment on Render
 
-### Database Configuration
-- **[DATABASE_SETUP.md](DATABASE_SETUP.md)** - Complete database configuration guide
-- **[DATABASE_SWITCH_GUIDE.md](DATABASE_SWITCH_GUIDE.md)** - How to switch between databases
-- **[PERSISTENT_DB.md](PERSISTENT_DB.md)** - SQLite persistence implementation
-
-### Docker Reference
-- **[DOCKER_COMPOSE_SETUP.md](DOCKER_COMPOSE_SETUP.md)** - Full Docker Compose reference
-- **[DOCKER_SETUP_SUMMARY.md](DOCKER_SETUP_SUMMARY.md)** - Docker setup overview
+### Main Documentation
+- **[../README.md](../README.md)** - Project overview and quick start
 
 ---
 
-## 🎯 By Use Case
+## 🎯 Quick Guide
 
-### I want to get started quickly
-→ Read [DOCKER_QUICK_START.md](DOCKER_QUICK_START.md) (5 minutes)
+### Local Development
 
-### I need to understand database options
-→ Read [DATABASES.md](DATABASES.md) (5 minutes)
+```bash
+# Start the application (includes PostgreSQL)
+dotnet run --project SimpleBlog.AppHost
+```
 
-### I want to switch databases
-→ Read [DATABASE_SWITCH_GUIDE.md](DATABASE_SWITCH_GUIDE.md) (5 minutes)
+Aspire automatically handles:
+- PostgreSQL container
+- Database creation
+- Migrations
+- Data seeding
 
-### I need a quick reference
-→ Read [DOCKER_CHEATSHEET.md](DOCKER_CHEATSHEET.md) (1 page)
+### View Database
 
-### I need full Docker documentation
-→ Read [DOCKER_COMPOSE_SETUP.md](DOCKER_COMPOSE_SETUP.md) (20 minutes)
+Open Aspire Dashboard (URL shown in console) to:
+- See PostgreSQL connection string
+- Monitor database logs
+- View resource status
+
+### Production Deployment
+
+Follow [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for:
+- Blueprint deployment (recommended)
+- Manual deployment steps
+- Environment configuration
+- Troubleshooting
 
 ---
 
-## 📖 Documentation Structure
+## 📖 File Structure
 
 ```
 docs/
 ├── README.md                      ← You are here
-├── DATABASES.md                   ← Main database guide
-├── DOCKER_CHEATSHEET.md           ← Quick reference
-├── DOCKER_QUICK_START.md          ← 30-second setup
-├── DATABASE_SETUP.md              ← Complete configuration
-├── DATABASE_SWITCH_GUIDE.md       ← Switch databases
-├── DOCKER_COMPOSE_SETUP.md        ← Full Docker reference
-├── DOCKER_SETUP_SUMMARY.md        ← Setup overview
-└── PERSISTENT_DB.md               ← SQLite details
+├── DATABASES.md                   ← PostgreSQL guide
+└── RENDER_DEPLOYMENT.md           ← Production deployment
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🔧 Technology Stack
 
-### Option 1: SQLite (Default - No Setup)
+- **.NET 9.0** with Aspire 13.1.0
+- **PostgreSQL** - Database (local & production)
+- **Entity Framework Core 9.0.10**
+- **Npgsql 9.0.4** - PostgreSQL provider
+- **Docker** - Managed by Aspire
+
+---
+
+## 🚀 Common Tasks
+
+### Create Migration
+
 ```bash
+dotnet ef migrations add MigrationName --project SimpleBlog.ApiService
+```
+
+### Apply Migrations
+
+```bash
+dotnet ef database update --project SimpleBlog.ApiService
+```
+
+### Reset Database
+
+```bash
+# Find volume name in Aspire Dashboard
+docker volume rm <postgres-volume-name>
+
+# Restart application - database will be recreated
 dotnet run --project SimpleBlog.AppHost
 ```
 
-### Option 2: SQL Server (Docker)
-```bash
-docker-compose --profile sql-server up -d
-# Update connection string in appsettings.Development.json
-dotnet run --project SimpleBlog.AppHost
-```
+### Deploy to Render
 
-### Option 3: PostgreSQL (Docker)
-```bash
-docker-compose --profile postgres up -d
-# Update connection string in appsettings.Development.json
-dotnet run --project SimpleBlog.AppHost
-```
+1. Push code to GitHub/GitLab
+2. Create Blueprint in Render Dashboard
+3. Connect repository
+4. Deploy automatically
+
+See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for details.
+
+---
+
+## 📝 Notes
+
+- **SQL Server removed** - Project now uses PostgreSQL exclusively
+- **Docker Compose removed** - Aspire handles container orchestration
+- All database-related files moved to [DATABASES.md](DATABASES.md)
+- Production and local development use the same database engine
 
 ---
 
 ## 🔗 External Links
 
-- [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [SQL Server Docker Hub](https://hub.docker.com/_/microsoft-mssql-server)
-- [PostgreSQL Docker Hub](https://hub.docker.com/_/postgres)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [.NET Aspire Documentation](https://learn.microsoft.com/dotnet/aspire/)
+- [Npgsql Documentation](https://www.npgsql.org/doc/)
 
 ---
 
-**Last Updated:** December 27, 2025  
+**Last Updated:** January 4, 2026  
 **Version:** 1.0
