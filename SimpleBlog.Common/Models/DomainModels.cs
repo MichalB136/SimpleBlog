@@ -1,4 +1,4 @@
-namespace SimpleBlog.Common;
+namespace SimpleBlog.Common.Models;
 
 // Domain models
 public record Post(

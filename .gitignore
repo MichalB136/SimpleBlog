@@ -100,7 +100,7 @@ StyleCopReport.xml
 *.pgd
 *.rsp
 # but not Directory.Build.rsp, as it configures directory-level build defaults
-!Directory.Build.pdb
+!Directory.Build.rsp
 *.ipdb
 *.pgc
 *.pgd
@@ -348,8 +348,6 @@ ASALocalRun/
 *.binlog
 **/.mfractor/
 
-# Local History for Visual Studio
-**/
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
 
@@ -403,16 +401,22 @@ FodyWeavers.xsd
 
 # .NET Aspire
 .aspire/
+.dcproj.user
+
+# Local appsettings files
+appsettings.*.local.json
+appsettings.Development.*.json
+
+# LocalDB files
+*.mdf
+*.ldf
 
 # Environment variables (*.env already defined in User-specific files section above)
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.render
 
 # macOS
 .DS_Store

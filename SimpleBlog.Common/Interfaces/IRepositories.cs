@@ -1,4 +1,6 @@
-namespace SimpleBlog.Common;
+using SimpleBlog.Common.Models;
+
+namespace SimpleBlog.Common.Interfaces;
 
 public interface IPostRepository
 {
@@ -30,9 +32,4 @@ public interface IOrderRepository
 public interface IUserRepository
 {
     User? ValidateUser(string username, string password);
-}
-
-public interface IEmailService
-{
-    Task SendOrderConfirmationAsync(string customerEmail, string customerName, Order order);
 }

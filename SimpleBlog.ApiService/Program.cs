@@ -13,6 +13,12 @@ using SimpleBlog.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load shared endpoint configuration from hierarchy:
+// 1. appsettings.shared.json (base)
+// 2. appsettings.shared.{Environment}.json (environment override)
+// 3. Environment variables (SimpleBlog_* prefix)
+builder.Configuration.AddSharedConfiguration(builder.Environment.EnvironmentName);
+
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
@@ -25,6 +31,9 @@ if (Environment.GetEnvironmentVariable("PORT") is string port)
 // Add services to the container.
 builder.Services.AddProblemDetails();
 builder.Services.AddLogging();
+
+// Add API configurations (endpoints and authorization) to DI container
+builder.Services.AddApiConfigurations(builder.Configuration);
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -512,15 +521,19 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Get configurations from DI container
+var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
+var authConfig = app.Services.GetRequiredService<AuthorizationConfiguration>();
+
 app.UseCors("AllowDevClients");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks(endpointConfig.Health);
 
 // Login endpoint
-app.MapPost("/login", (LoginRequest request, IUserRepository userRepo, ILogger<Program> logger) =>
+app.MapPost(endpointConfig.Login, (LoginRequest request, IUserRepository userRepo, ILogger<Program> logger) =>
 {
     // Validate input
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
@@ -544,7 +557,7 @@ app.MapPost("/login", (LoginRequest request, IUserRepository userRepo, ILogger<P
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role)
         }),
-        Expires = DateTime.UtcNow.AddHours(8),
+        Expires = DateTime.UtcNow.AddHours(authConfig.TokenExpirationHours),
         Issuer = jwtIssuer,
         Audience = jwtAudience,
         SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -559,22 +572,22 @@ app.MapPost("/login", (LoginRequest request, IUserRepository userRepo, ILogger<P
     return Results.Ok(new { token = tokenString, username = user.Username, role = user.Role });
 });
 
-var posts = app.MapGroup("/posts");
+var posts = app.MapGroup(endpointConfig.Posts.Base);
 
-posts.MapGet(string.Empty, (IPostRepository repository) => Results.Ok(repository.GetAll()));
+posts.MapGet(endpointConfig.Posts.GetAll, (IPostRepository repository) => Results.Ok(repository.GetAll()));
 
-posts.MapGet("/{id:guid}", (Guid id, IPostRepository repository) =>
+posts.MapGet(endpointConfig.Posts.GetById, (Guid id, IPostRepository repository) =>
 {
     var post = repository.GetById(id);
     return post is not null ? Results.Ok(post) : Results.NotFound();
 });
 
-posts.MapPost(string.Empty, (CreatePostRequest request, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
+posts.MapPost(endpointConfig.Posts.Create, (CreatePostRequest request, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    logger.LogInformation("POST /posts called by {UserName}", context.User.Identity?.Name);
+    logger.LogInformation("POST {Endpoint} called by {UserName}", endpointConfig.Posts.Base, context.User.Identity?.Name);
     
     // Require admin role to create posts
-    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+    if (authConfig.RequireAdminForPostCreate && !context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
         return Results.Forbid();
@@ -591,10 +604,10 @@ posts.MapPost(string.Empty, (CreatePostRequest request, IPostRepository reposito
     }
 
     var created = repository.Create(request);
-    return Results.Created($"/posts/{created.Id}", created);
+    return Results.Created($"{endpointConfig.Posts.Base}/{created.Id}", created);
 }).RequireAuthorization();
 
-posts.MapPut("/{id:guid}", (Guid id, UpdatePostRequest request, IPostRepository repository, ILogger<Program> logger) =>
+posts.MapPut(endpointConfig.Posts.Update, (Guid id, UpdatePostRequest request, IPostRepository repository, ILogger<Program> logger) =>
 {
     if (string.IsNullOrWhiteSpace(request.Title) && string.IsNullOrWhiteSpace(request.Content))
     {
@@ -612,10 +625,10 @@ posts.MapPut("/{id:guid}", (Guid id, UpdatePostRequest request, IPostRepository 
     return Results.Ok(updated);
 }).RequireAuthorization();
 
-posts.MapDelete("/{id:guid}", (Guid id, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
+posts.MapDelete(endpointConfig.Posts.Delete, (Guid id, IPostRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
     // Require admin role to delete posts
-    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+    if (authConfig.RequireAdminForPostDelete && !context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized delete attempt for post: {PostId}", id);
         return Results.Forbid();
@@ -632,13 +645,13 @@ posts.MapDelete("/{id:guid}", (Guid id, IPostRepository repository, HttpContext 
     return Results.NoContent();
 }).RequireAuthorization();
 
-posts.MapGet("/{id:guid}/comments", (Guid id, IPostRepository repository) =>
+posts.MapGet(endpointConfig.Posts.GetComments, (Guid id, IPostRepository repository) =>
 {
     var comments = repository.GetComments(id);
     return comments is not null ? Results.Ok(comments) : Results.NotFound();
 });
 
-posts.MapPost("/{id:guid}/comments", (Guid id, CreateCommentRequest request, IPostRepository repository, ILogger<Program> logger) =>
+posts.MapPost(endpointConfig.Posts.AddComment, (Guid id, CreateCommentRequest request, IPostRepository repository, ILogger<Program> logger) =>
 {
     if (string.IsNullOrWhiteSpace(request.Content))
     {
@@ -658,23 +671,23 @@ posts.MapPost("/{id:guid}/comments", (Guid id, CreateCommentRequest request, IPo
     }
     
     logger.LogInformation("Comment added to post: {PostId}", id);
-    return Results.Created($"/posts/{id}/comments/{created.Id}", created);
+    return Results.Created($"{endpointConfig.Posts.Base}/{id}/comments/{created.Id}", created);
 });
 
 // Products endpoints
-var products = app.MapGroup("/products");
+var products = app.MapGroup(endpointConfig.Products.Base);
 
-products.MapGet(string.Empty, (IProductRepository repository) => Results.Ok(repository.GetAll()));
+products.MapGet(endpointConfig.Products.GetAll, (IProductRepository repository) => Results.Ok(repository.GetAll()));
 
-products.MapGet("/{id:guid}", (Guid id, IProductRepository repository) =>
+products.MapGet(endpointConfig.Products.GetById, (Guid id, IProductRepository repository) =>
 {
     var product = repository.GetById(id);
     return product is not null ? Results.Ok(product) : Results.NotFound();
 });
 
-products.MapPost(string.Empty, (CreateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
+products.MapPost(endpointConfig.Products.Create, (CreateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+    if (authConfig.RequireAdminForProductCreate && !context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("User {UserName} attempted to create product without Admin role", context.User.Identity?.Name);
         return Results.Forbid();
@@ -687,12 +700,12 @@ products.MapPost(string.Empty, (CreateProductRequest request, IProductRepository
 
     var created = repository.Create(request);
     logger.LogInformation("Product created: {ProductId}", created.Id);
-    return Results.Created($"/products/{created.Id}", created);
+    return Results.Created($"{endpointConfig.Products.Base}/{created.Id}", created);
 }).RequireAuthorization();
 
-products.MapPut("/{id:guid}", (Guid id, UpdateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
+products.MapPut(endpointConfig.Products.Update, (Guid id, UpdateProductRequest request, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+    if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized update attempt for product: {ProductId}", id);
         return Results.Forbid();
@@ -709,9 +722,9 @@ products.MapPut("/{id:guid}", (Guid id, UpdateProductRequest request, IProductRe
     return Results.Ok(updated);
 }).RequireAuthorization();
 
-products.MapDelete("/{id:guid}", (Guid id, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
+products.MapDelete(endpointConfig.Products.Delete, (Guid id, IProductRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+    if (authConfig.RequireAdminForProductDelete && !context.User.IsInRole(SeedDataConstants.AdminUsername))
     {
         logger.LogWarning("Unauthorized delete attempt for product: {ProductId}", id);
         return Results.Forbid();
@@ -729,11 +742,11 @@ products.MapDelete("/{id:guid}", (Guid id, IProductRepository repository, HttpCo
 }).RequireAuthorization();
 
 // Orders endpoints
-var orders = app.MapGroup("/orders");
+var orders = app.MapGroup(endpointConfig.Orders.Base);
 
-orders.MapGet(string.Empty, (IOrderRepository repository, HttpContext context, ILogger<Program> logger) =>
+orders.MapGet(endpointConfig.Orders.GetAll, (IOrderRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole("Admin"))
+    if (authConfig.RequireAdminForOrderView && !context.User.IsInRole("Admin"))
     {
         logger.LogWarning("Unauthorized attempt to view all orders");
         return Results.Forbid();
@@ -742,9 +755,9 @@ orders.MapGet(string.Empty, (IOrderRepository repository, HttpContext context, I
     return Results.Ok(repository.GetAll());
 }).RequireAuthorization();
 
-orders.MapGet("/{id:guid}", (Guid id, IOrderRepository repository, HttpContext context, ILogger<Program> logger) =>
+orders.MapGet(endpointConfig.Orders.GetById, (Guid id, IOrderRepository repository, HttpContext context, ILogger<Program> logger) =>
 {
-    if (!context.User.IsInRole("Admin"))
+    if (authConfig.RequireAdminForOrderView && !context.User.IsInRole("Admin"))
     {
         logger.LogWarning("Unauthorized attempt to view order: {OrderId}", id);
         return Results.Forbid();
@@ -754,7 +767,7 @@ orders.MapGet("/{id:guid}", (Guid id, IOrderRepository repository, HttpContext c
     return order is not null ? Results.Ok(order) : Results.NotFound();
 }).RequireAuthorization();
 
-orders.MapPost(string.Empty, async (CreateOrderRequest request, IOrderRepository repository, IEmailService emailService, ILogger<Program> logger) =>
+orders.MapPost(endpointConfig.Orders.Create, async (CreateOrderRequest request, IOrderRepository repository, IEmailService emailService, ILogger<Program> logger) =>
 {
     if (string.IsNullOrWhiteSpace(request.CustomerName))
     {
@@ -778,7 +791,7 @@ orders.MapPost(string.Empty, async (CreateOrderRequest request, IOrderRepository
     await emailService.SendOrderConfirmationAsync(request.CustomerEmail, request.CustomerName, created);
     logger.LogInformation("Order confirmation email sent to: {Email}", request.CustomerEmail);
     
-    return Results.Created($"/orders/{created.Id}", created);
+    return Results.Created($"{endpointConfig.Orders.Base}/{created.Id}", created);
 });
 
 app.MapDefaultEndpoints();
