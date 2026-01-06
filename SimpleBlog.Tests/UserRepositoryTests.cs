@@ -13,24 +13,24 @@ public sealed class UserRepositoryTests
             ["testuser"] = ("testpass", "User")
         };
 
-        public User? ValidateUser(string username, string password)
+        public Task<User?> ValidateUserAsync(string username, string password)
         {
             if (_users.TryGetValue(username, out var userInfo) && userInfo.Password == password)
             {
-                return new User(username, string.Empty, userInfo.Role);
+                return Task.FromResult<User?>(new User(username, string.Empty, userInfo.Role));
             }
-            return null;
+            return Task.FromResult<User?>(null);
         }
     }
 
     [Fact]
-    public void ValidateUser_CorrectCredentials_ReturnsUser()
+    public async Task ValidateUser_CorrectCredentials_ReturnsUser()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("admin", "admin123");
+        var result = await repository.ValidateUserAsync("admin", "admin123");
 
         // Assert
         Assert.NotNull(result);
@@ -39,39 +39,39 @@ public sealed class UserRepositoryTests
     }
 
     [Fact]
-    public void ValidateUser_IncorrectPassword_ReturnsNull()
+    public async Task ValidateUser_IncorrectPassword_ReturnsNull()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("admin", "wrongpassword");
+        var result = await repository.ValidateUserAsync("admin", "wrongpassword");
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public void ValidateUser_NonExistentUser_ReturnsNull()
+    public async Task ValidateUser_NonExistentUser_ReturnsNull()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("nonexistent", "password");
+        var result = await repository.ValidateUserAsync("nonexistent", "password");
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public void ValidateUser_AdminRole_HasCorrectRole()
+    public async Task ValidateUser_AdminRole_HasCorrectRole()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("admin", "admin123");
+        var result = await repository.ValidateUserAsync("admin", "admin123");
 
         // Assert
         Assert.NotNull(result);
@@ -79,13 +79,13 @@ public sealed class UserRepositoryTests
     }
 
     [Fact]
-    public void ValidateUser_UserRole_HasCorrectRole()
+    public async Task ValidateUser_UserRole_HasCorrectRole()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("user", "user123");
+        var result = await repository.ValidateUserAsync("user", "user123");
 
         // Assert
         Assert.NotNull(result);
@@ -95,13 +95,13 @@ public sealed class UserRepositoryTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ValidateUser_EmptyUsername_ReturnsNull(string username)
+    public async Task ValidateUser_EmptyUsername_ReturnsNull(string username)
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser(username, "password");
+        var result = await repository.ValidateUserAsync(username, "password");
 
         // Assert
         Assert.Null(result);
@@ -110,27 +110,27 @@ public sealed class UserRepositoryTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void ValidateUser_EmptyPassword_ReturnsNull(string password)
+    public async Task ValidateUser_EmptyPassword_ReturnsNull(string password)
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var result = repository.ValidateUser("admin", password);
+        var result = await repository.ValidateUserAsync("admin", password);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public void ValidateUser_CaseSensitiveUsername_ReturnsNull()
+    public async Task ValidateUser_CaseSensitiveUsername_ReturnsNull()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var resultUpperCase = repository.ValidateUser("ADMIN", "admin123");
-        var resultMixedCase = repository.ValidateUser("Admin", "admin123");
+        var resultUpperCase = await repository.ValidateUserAsync("ADMIN", "admin123");
+        var resultMixedCase = await repository.ValidateUserAsync("Admin", "admin123");
 
         // Assert
         Assert.Null(resultUpperCase);
@@ -139,15 +139,15 @@ public sealed class UserRepositoryTests
     }
 
     [Fact]
-    public void ValidateUser_MultipleUsers_EachHasUniqueCredentials()
+    public async Task ValidateUser_MultipleUsers_EachHasUniqueCredentials()
     {
         // Arrange
         var repository = new TestUserRepository();
 
         // Act
-        var admin = repository.ValidateUser("admin", "admin123");
-        var user = repository.ValidateUser("user", "user123");
-        var testUser = repository.ValidateUser("testuser", "testpass");
+        var admin = await repository.ValidateUserAsync("admin", "admin123");
+        var user = await repository.ValidateUserAsync("user", "user123");
+        var testUser = await repository.ValidateUserAsync("testuser", "testpass");
 
         // Assert
         Assert.NotNull(admin);

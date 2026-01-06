@@ -16,11 +16,11 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void GetAll_Products_ReturnsAllOrderedByCreatedAt()
+    public async Task GetAllAsync_Products_ReturnsAllOrderedByCreatedAt()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
         
         var product1 = new ProductEntity
         {
@@ -48,19 +48,20 @@ public sealed class ShopRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetAll().ToList();
+        var result = await repository.GetAllAsync(1, 10);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Product 2", result[0].Name); // Most recent first
+        Assert.Equal(2, result.Total);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("Product 2", result.Items[0].Name); // Most recent first
     }
 
     [Fact]
-    public void Create_Product_ValidData_CreatesProduct()
+    public async Task CreateAsync_Product_ValidData_CreatesProduct()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
         
         var request = new CreateProductRequest(
             "New Product",
@@ -72,7 +73,7 @@ public sealed class ShopRepositoryTests
         );
 
         // Act
-        var result = repository.Create(request);
+        var result = await repository.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -84,11 +85,11 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void Update_Product_Exists_UpdatesSuccessfully()
+    public async Task UpdateAsync_Product_Exists_UpdatesSuccessfully()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
         
         var productId = Guid.NewGuid();
         var product = new ProductEntity
@@ -115,7 +116,7 @@ public sealed class ShopRepositoryTests
         );
 
         // Act
-        var result = repository.Update(productId, updateRequest);
+        var result = await repository.UpdateAsync(productId, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -125,11 +126,30 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void Delete_Product_Exists_DeletesSuccessfully()
+    public async Task UpdateAsync_Product_DoesNotExist_ReturnsNull()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
+
+        var updateRequest = new UpdateProductRequest(
+            "Name",
+            "Desc",
+            10.00m,
+            null,
+            "Cat",
+            1);
+
+        var result = await repository.UpdateAsync(Guid.NewGuid(), updateRequest);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Product_Exists_DeletesSuccessfully()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
         
         var productId = Guid.NewGuid();
         var product = new ProductEntity
@@ -147,7 +167,7 @@ public sealed class ShopRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.Delete(productId);
+        var result = await repository.DeleteAsync(productId);
 
         // Assert
         Assert.True(result);
@@ -155,11 +175,22 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void Create_Order_ValidData_CreatesOrderWithItems()
+    public async Task DeleteAsync_Product_DoesNotExist_ReturnsFalse()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
+
+        var result = await repository.DeleteAsync(Guid.NewGuid());
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Order_ValidData_CreatesOrderWithItems()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfOrderRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfOrderRepository(context, new NoOpOperationLogger());
         
         // Add products first
         var product1 = new ProductEntity
@@ -201,7 +232,7 @@ public sealed class ShopRepositoryTests
         );
 
         // Act
-        var result = repository.Create(request);
+        var result = await repository.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -220,11 +251,11 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void GetAll_Orders_ReturnsAllOrders()
+    public async Task GetAllAsync_Orders_ReturnsAllOrders()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfOrderRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfOrderRepository(context, new NoOpOperationLogger());
         
         var order1 = new OrderEntity
         {
@@ -258,21 +289,71 @@ public sealed class ShopRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetAll().ToList();
+        var result = await repository.GetAllAsync(1, 10);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Customer 2", result[0].CustomerName); // Most recent first
+        Assert.Equal(2, result.Total);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("Customer 2", result.Items[0].CustomerName); // Most recent first
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_Order_ReturnsOrderWithItems()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfOrderRepository(context, new NoOpOperationLogger());
+
+        var orderId = Guid.NewGuid();
+        var order = new OrderEntity
+        {
+            Id = orderId,
+            CustomerName = "Customer",
+            CustomerEmail = "cust@test.com",
+            CustomerPhone = "111",
+            ShippingAddress = "Addr",
+            ShippingCity = "City",
+            ShippingPostalCode = "00-001",
+            TotalAmount = 30m,
+            CreatedAt = DateTimeOffset.UtcNow,
+            Items = new List<OrderItemEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = Guid.NewGuid(),
+                    ProductName = "P1",
+                    Price = 10m,
+                    Quantity = 2
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = Guid.NewGuid(),
+                    ProductName = "P2",
+                    Price = 10m,
+                    Quantity = 1
+                }
+            }
+        };
+
+        context.Orders.Add(order);
+        context.SaveChanges();
+
+        var result = await repository.GetByIdAsync(orderId);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal(30m, result.TotalAmount);
     }
 
     [Theory]
     [InlineData(0)] // Zero quantity
     [InlineData(-1)] // Negative quantity
-    public void Create_Order_InvalidQuantity_ThrowsOrHandlesGracefully(int quantity)
+    public async Task CreateAsync_Order_InvalidQuantity_ThrowsOrHandlesGracefully(int quantity)
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfOrderRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfOrderRepository(context, new NoOpOperationLogger());
         
         var request = new CreateOrderRequest(
             "John Doe",
@@ -289,16 +370,56 @@ public sealed class ShopRepositoryTests
 
         // Act & Assert
         // This test documents current behavior - ideally should validate quantity
-        var result = repository.Create(request);
+        var result = await repository.CreateAsync(request);
         Assert.NotNull(result); // Currently doesn't validate, but documents the behavior
     }
 
     [Fact]
-    public void GetById_Product_Exists_ReturnsProduct()
+    public async Task CreateAsync_Order_WithInsufficientStock_DocumentsCurrentBehavior()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfOrderRepository(context, new NoOpOperationLogger());
+
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Limited",
+            Description = "Low stock",
+            Price = 5m,
+            Stock = 1,
+            Category = "Test",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        context.Products.Add(product);
+        context.SaveChanges();
+
+        var request = new CreateOrderRequest(
+            "Jane Doe",
+            "jane@example.com",
+            "999",
+            "Addr",
+            "City",
+            "00-002",
+            new List<OrderItemRequest>
+            {
+                new(product.Id, 5) // exceeds stock; behavior is currently not validated
+            });
+
+        var result = await repository.CreateAsync(request);
+
+        Assert.NotNull(result);
+        Assert.Equal(25m, result.TotalAmount); // documents that calculation ignores stock availability
+        Assert.Single(result.Items);
+        Assert.Equal(5, result.Items[0].Quantity);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_Product_Exists_ReturnsProduct()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
         
         var productId = Guid.NewGuid();
         var product = new ProductEntity
@@ -316,7 +437,7 @@ public sealed class ShopRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetById(productId);
+        var result = await repository.GetByIdAsync(productId);
 
         // Assert
         Assert.NotNull(result);
@@ -325,14 +446,14 @@ public sealed class ShopRepositoryTests
     }
 
     [Fact]
-    public void GetById_Product_DoesNotExist_ReturnsNull()
+    public async Task GetByIdAsync_Product_DoesNotExist_ReturnsNull()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfProductRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
 
         // Act
-        var result = repository.GetById(Guid.NewGuid());
+        var result = await repository.GetByIdAsync(Guid.NewGuid());
 
         // Assert
         Assert.Null(result);

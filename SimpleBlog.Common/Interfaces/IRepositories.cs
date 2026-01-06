@@ -4,32 +4,32 @@ namespace SimpleBlog.Common.Interfaces;
 
 public interface IPostRepository
 {
-    IEnumerable<Post> GetAll();
-    Post? GetById(Guid id);
-    Post Create(CreatePostRequest request);
-    Post? Update(Guid id, UpdatePostRequest request);
-    bool Delete(Guid id);
-    IReadOnlyList<Comment>? GetComments(Guid postId);
-    Comment? AddComment(Guid postId, CreateCommentRequest request);
+    Task<PaginatedResult<Post>> GetAllAsync(int page = 1, int pageSize = 10);
+    Task<Post?> GetByIdAsync(Guid id);
+    Task<Post> CreateAsync(CreatePostRequest request);
+    Task<Post?> UpdateAsync(Guid id, UpdatePostRequest request);
+    Task<bool> DeleteAsync(Guid id);
+    Task<IReadOnlyList<Comment>?> GetCommentsAsync(Guid postId);
+    Task<Comment?> AddCommentAsync(Guid postId, CreateCommentRequest request);
 }
 
 public interface IProductRepository
 {
-    IEnumerable<Product> GetAll();
-    Product? GetById(Guid id);
-    Product Create(CreateProductRequest request);
-    Product? Update(Guid id, UpdateProductRequest request);
-    bool Delete(Guid id);
+    Task<PaginatedResult<Product>> GetAllAsync(int page = 1, int pageSize = 10);
+    Task<Product?> GetByIdAsync(Guid id);
+    Task<Product> CreateAsync(CreateProductRequest request);
+    Task<Product?> UpdateAsync(Guid id, UpdateProductRequest request);
+    Task<bool> DeleteAsync(Guid id);
 }
 
 public interface IOrderRepository
 {
-    IEnumerable<Order> GetAll();
-    Order? GetById(Guid id);
-    Order Create(CreateOrderRequest request);
+    Task<PaginatedResult<Order>> GetAllAsync(int page = 1, int pageSize = 10);
+    Task<Order?> GetByIdAsync(Guid id);
+    Task<Order> CreateAsync(CreateOrderRequest request);
 }
 
 public interface IUserRepository
 {
-    User? ValidateUser(string username, string password);
+    Task<User?> ValidateUserAsync(string username, string password);
 }

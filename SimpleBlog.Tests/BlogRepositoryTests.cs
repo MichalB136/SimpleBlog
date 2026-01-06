@@ -16,11 +16,11 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void GetAll_ReturnsAllPosts_OrderedByCreatedAtDescending()
+    public async Task GetAllAsync_ReturnsAllPosts_OrderedByCreatedAtDescending()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var post1 = new PostEntity
         {
@@ -44,20 +44,21 @@ public sealed class BlogRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetAll().ToList();
+        var result = await repository.GetAllAsync(1, 10);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Second Post", result[0].Title); // Most recent first
-        Assert.Equal("First Post", result[1].Title);
+        Assert.Equal(2, result.Total);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("Second Post", result.Items[0].Title); // Most recent first
+        Assert.Equal("First Post", result.Items[1].Title);
     }
 
     [Fact]
-    public void GetById_PostExists_ReturnsPost()
+    public async Task GetByIdAsync_PostExists_ReturnsPost()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var postId = Guid.NewGuid();
         var post = new PostEntity
@@ -73,7 +74,7 @@ public sealed class BlogRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetById(postId);
+        var result = await repository.GetByIdAsync(postId);
 
         // Assert
         Assert.NotNull(result);
@@ -83,25 +84,25 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void GetById_PostDoesNotExist_ReturnsNull()
+    public async Task GetByIdAsync_PostDoesNotExist_ReturnsNull()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
 
         // Act
-        var result = repository.GetById(Guid.NewGuid());
+        var result = await repository.GetByIdAsync(Guid.NewGuid());
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public void Create_ValidRequest_CreatesPost()
+    public async Task CreateAsync_ValidRequest_CreatesPost()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var request = new CreatePostRequest(
             "New Post",
@@ -111,7 +112,7 @@ public sealed class BlogRepositoryTests
         );
 
         // Act
-        var result = repository.Create(request);
+        var result = await repository.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -128,11 +129,11 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void Update_PostExists_UpdatesPost()
+    public async Task UpdateAsync_PostExists_UpdatesPost()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var postId = Guid.NewGuid();
         var post = new PostEntity
@@ -155,7 +156,7 @@ public sealed class BlogRepositoryTests
         );
 
         // Act
-        var result = repository.Update(postId, updateRequest);
+        var result = await repository.UpdateAsync(postId, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -171,27 +172,55 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void Update_PostDoesNotExist_ReturnsNull()
+    public async Task UpdateAsync_PostDoesNotExist_ReturnsNull()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var updateRequest = new UpdatePostRequest("Title", "Content", "Author", null);
 
         // Act
-        var result = repository.Update(Guid.NewGuid(), updateRequest);
+        var result = await repository.UpdateAsync(Guid.NewGuid(), updateRequest);
 
         // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    public void Delete_PostExists_DeletesPost()
+    public async Task UpdateAsync_NullImageUrl_DoesNotClearExistingImage()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
+
+        var postId = Guid.NewGuid();
+        var post = new PostEntity
+        {
+            Id = postId,
+            Title = "Title",
+            Content = "Content",
+            Author = "Author",
+            ImageUrl = "https://example.com/original.jpg",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        context.Posts.Add(post);
+        context.SaveChanges();
+
+        var updateRequest = new UpdatePostRequest("Updated", "Updated", "Author", null);
+
+        var result = await repository.UpdateAsync(postId, updateRequest);
+
+        Assert.NotNull(result);
+        Assert.Equal("https://example.com/original.jpg", result.ImageUrl); // current behavior keeps image when null supplied
+    }
+
+    [Fact]
+    public async Task DeleteAsync_PostExists_DeletesPost()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var postId = Guid.NewGuid();
         var post = new PostEntity
@@ -207,7 +236,7 @@ public sealed class BlogRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.Delete(postId);
+        var result = await repository.DeleteAsync(postId);
 
         // Assert
         Assert.True(result);
@@ -215,25 +244,25 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void Delete_PostDoesNotExist_ReturnsFalse()
+    public async Task DeleteAsync_PostDoesNotExist_ReturnsFalse()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
 
         // Act
-        var result = repository.Delete(Guid.NewGuid());
+        var result = await repository.DeleteAsync(Guid.NewGuid());
 
         // Assert
         Assert.False(result);
     }
 
     [Fact]
-    public void GetComments_PostExists_ReturnsComments()
+    public async Task GetCommentsAsync_PostExists_ReturnsComments()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var postId = Guid.NewGuid();
         var post = new PostEntity
@@ -254,19 +283,20 @@ public sealed class BlogRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = repository.GetComments(postId) ?? new List<Comment>();
+        var result = await repository.GetCommentsAsync(postId);
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal(2, result.Count);
         Assert.All(result, c => Assert.Equal(postId, c.PostId));
     }
 
     [Fact]
-    public void AddComment_PostExists_AddsComment()
+    public async Task AddCommentAsync_PostExists_AddsComment()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var postId = Guid.NewGuid();
         var post = new PostEntity
@@ -284,7 +314,7 @@ public sealed class BlogRepositoryTests
         var commentRequest = new CreateCommentRequest("Reader", "Great post!");
 
         // Act
-        var result = repository.AddComment(postId, commentRequest);
+        var result = await repository.AddCommentAsync(postId, commentRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -299,16 +329,66 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public void AddComment_PostDoesNotExist_ReturnsNull()
+    public async Task AddCommentAsync_ReturnsCommentsOrderedByCreatedAtDescending()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
+
+        var postId = Guid.NewGuid();
+        var baseTime = DateTimeOffset.UtcNow.AddMinutes(-30);
+
+        var post = new PostEntity
+        {
+            Id = postId,
+            Title = "Post",
+            Content = "Content",
+            Author = "Author",
+            CreatedAt = baseTime,
+            Comments = new List<CommentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Author = "Older",
+                    Content = "Older comment",
+                    CreatedAt = baseTime.AddMinutes(-5)
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Author = "Newer",
+                    Content = "Newer comment",
+                    CreatedAt = baseTime.AddMinutes(-1)
+                }
+            }
+        };
+
+        context.Posts.Add(post);
+        context.SaveChanges();
+
+        var added = await repository.AddCommentAsync(postId, new CreateCommentRequest("Reader", "Latest"));
+        Assert.NotNull(added);
+
+        var comments = await repository.GetCommentsAsync(postId);
+
+        Assert.NotNull(comments);
+        Assert.True(comments.Count >= 3);
+        Assert.Equal("Latest", comments[0].Content); // newest comment first
+        Assert.True(comments[0].CreatedAt >= comments[1].CreatedAt);
+        Assert.True(comments[1].CreatedAt >= comments[2].CreatedAt);
+    }
+
+    [Fact]
+    public async Task AddCommentAsync_PostDoesNotExist_ReturnsNull()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
-        var repository = new EfPostRepository(context);
+        await using var context = CreateInMemoryContext();
+        var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
         var commentRequest = new CreateCommentRequest("Comment", "Author");
 
         // Act
-        var result = repository.AddComment(Guid.NewGuid(), commentRequest);
+        var result = await repository.AddCommentAsync(Guid.NewGuid(), commentRequest);
 
         // Assert
         Assert.Null(result);
