@@ -1,68 +1,227 @@
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.Common;
+using SimpleBlog.Common.Extensions;
+using SimpleBlog.Common.Logging;
+using SimpleBlog.Common.Specifications;
+using SimpleBlog.Shop.Services.Specifications;
 
 namespace SimpleBlog.Shop.Services;
 
-public sealed class EfOrderRepository(ShopDbContext context) : IOrderRepository
+public sealed class EfOrderRepository(
+    ShopDbContext context,
+    IOperationLogger operationLogger) : IOrderRepository
 {
-    public IEnumerable<Order> GetAll()
+    public async Task<PaginatedResult<Order>> GetAllAsync(int page = 1, int pageSize = 10)
     {
-        var entities = context.Orders
-            .Include(o => o.Items)
-            .OrderByDescending(o => o.CreatedAt)
-            .ToList();
-        return entities.Select(MapToModel);
-    }
-
-    public Order? GetById(Guid id)
-    {
-        var entity = context.Orders
-            .Include(o => o.Items)
-            .FirstOrDefault(o => o.Id == id);
-        return entity is not null ? MapToModel(entity) : null;
-    }
-
-    public Order Create(CreateOrderRequest request)
-    {
-        var entity = new OrderEntity
-        {
-            Id = Guid.NewGuid(),
-            CustomerName = request.CustomerName,
-            CustomerEmail = request.CustomerEmail,
-            CustomerPhone = request.CustomerPhone,
-            ShippingAddress = request.ShippingAddress,
-            ShippingCity = request.ShippingCity,
-            ShippingPostalCode = request.ShippingPostalCode,
-            TotalAmount = 0,
-            CreatedAt = DateTimeOffset.UtcNow,
-            Items = new List<OrderItemEntity>()
-        };
-
-        decimal totalAmount = 0;
-        foreach (var itemRequest in request.Items)
-        {
-            var product = context.Products.FirstOrDefault(p => p.Id == itemRequest.ProductId);
-            if (product is null)
-                continue;
-
-            var item = new OrderItemEntity
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetAllOrders",
+            async () =>
             {
-                Id = Guid.NewGuid(),
-                OrderId = entity.Id,
-                ProductId = product.Id,
-                ProductName = product.Name,
-                Price = product.Price,
-                Quantity = itemRequest.Quantity
-            };
+                var total = await context.Orders.CountAsync();
+                var entities = await context.Orders
+                    .Include(o => o.Items)
+                    .OrderByDescending(o => o.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
 
-            entity.Items.Add(item);
-            totalAmount += product.Price * itemRequest.Quantity;
-        }
+                return new PaginatedResult<Order>
+                {
+                    Items = entities.Select(MapToModel).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            },
+            new { page, pageSize });
+    }
 
-        entity.TotalAmount = totalAmount;
-        context.Orders.Add(entity);
-        context.SaveChanges();
-        return MapToModel(entity);
+    public async Task<Order?> GetByIdAsync(Guid id)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetOrderById",
+            async () =>
+            {
+                var entity = await context.Orders
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+                return entity is not null ? MapToModel(entity) : null;
+            },
+            new { OrderId = id });
+    }
+
+    public async Task<Order> CreateAsync(CreateOrderRequest request)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "Create",
+            "Order",
+            async () =>
+            {
+                var entity = new OrderEntity
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerName = request.CustomerName,
+                    CustomerEmail = request.CustomerEmail,
+                    CustomerPhone = request.CustomerPhone,
+                    ShippingAddress = request.ShippingAddress,
+                    ShippingCity = request.ShippingCity,
+                    ShippingPostalCode = request.ShippingPostalCode,
+                    TotalAmount = 0,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    Items = new List<OrderItemEntity>()
+                };
+
+                decimal totalAmount = 0;
+                foreach (var itemRequest in request.Items)
+                {
+                    var product = await context.Products.FirstOrDefaultAsync(p => p.Id == itemRequest.ProductId);
+                    if (product is null)
+                        continue;
+
+                    var item = new OrderItemEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = entity.Id,
+                        ProductId = product.Id,
+                        ProductName = product.Name,
+                        Price = product.Price,
+                        Quantity = itemRequest.Quantity
+                    };
+
+                    entity.Items.Add(item);
+                    totalAmount += product.Price * itemRequest.Quantity;
+                }
+
+                entity.TotalAmount = totalAmount;
+                context.Orders.Add(entity);
+                await context.SaveChangesAsync();
+                return MapToModel(entity);
+            },
+            new { request.CustomerEmail, request.CustomerName, ItemCount = request.Items.Count });
+    }
+
+    /// <summary>
+    /// Gets all orders with items included using specification pattern.
+    /// </summary>
+    public async Task<PaginatedResult<Order>> GetAllWithItemsAsync(int page = 1, int pageSize = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetAllOrdersWithItems",
+            async () =>
+            {
+                var spec = new OrdersWithItemsSpecification();
+                operationLogger.LogSpecificationUsage(nameof(OrdersWithItemsSpecification), "Order", new { page, pageSize });
+                
+                var total = await context.Orders.CountAsync();
+                
+                var entities = await context.Orders
+                    .ApplySpecification(spec)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return new PaginatedResult<Order>
+                {
+                    Items = entities.Select(MapToModel).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            },
+            new { page, pageSize, SpecName = nameof(OrdersWithItemsSpecification) });
+    }
+
+    /// <summary>
+    /// Gets orders by customer email using specification pattern.
+    /// </summary>
+    public async Task<PaginatedResult<Order>> GetByCustomerEmailAsync(string customerEmail, int page = 1, int pageSize = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetOrdersByCustomerEmail",
+            async () =>
+            {
+                var spec = new OrdersByCustomerEmailSpecification(customerEmail);
+                operationLogger.LogSpecificationUsage(nameof(OrdersByCustomerEmailSpecification), "Order", new { customerEmail, page, pageSize });
+                
+                var total = await context.Orders.ApplySpecification(spec).CountAsync();
+                
+                var entities = await context.Orders
+                    .ApplySpecification(spec)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return new PaginatedResult<Order>
+                {
+                    Items = entities.Select(MapToModel).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            },
+            new { customerEmail, page, pageSize, SpecName = nameof(OrdersByCustomerEmailSpecification) });
+    }
+
+    /// <summary>
+    /// Gets orders created after a specific date using specification pattern.
+    /// </summary>
+    public async Task<PaginatedResult<Order>> GetCreatedAfterAsync(DateTimeOffset date, int page = 1, int pageSize = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetOrdersCreatedAfter",
+            async () =>
+            {
+                var spec = new OrdersCreatedAfterSpecification(date);
+                operationLogger.LogSpecificationUsage(nameof(OrdersCreatedAfterSpecification), "Order", new { date, page, pageSize });
+                
+                var total = await context.Orders.ApplySpecification(spec).CountAsync();
+                
+                var entities = await context.Orders
+                    .ApplySpecification(spec)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return new PaginatedResult<Order>
+                {
+                    Items = entities.Select(MapToModel).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            },
+            new { date, page, pageSize, SpecName = nameof(OrdersCreatedAfterSpecification) });
+    }
+
+    /// <summary>
+    /// Gets orders with minimum total amount using specification pattern.
+    /// </summary>
+    public async Task<PaginatedResult<Order>> GetByMinimumAmountAsync(decimal minAmount, int page = 1, int pageSize = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetOrdersByMinimumAmount",
+            async () =>
+            {
+                var spec = new OrdersByMinimumAmountSpecification(minAmount);
+                operationLogger.LogSpecificationUsage(nameof(OrdersByMinimumAmountSpecification), "Order", new { minAmount, page, pageSize });
+                
+                var total = await context.Orders.ApplySpecification(spec).CountAsync();
+                
+                var entities = await context.Orders
+                    .ApplySpecification(spec)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return new PaginatedResult<Order>
+                {
+                    Items = entities.Select(MapToModel).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                };
+            },
+            new { minAmount, page, pageSize, SpecName = nameof(OrdersByMinimumAmountSpecification) });
     }
 
     private static Order MapToModel(OrderEntity entity) =>

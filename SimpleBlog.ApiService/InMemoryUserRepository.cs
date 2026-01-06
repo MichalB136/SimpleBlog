@@ -8,13 +8,13 @@ internal sealed class InMemoryUserRepository : IUserRepository
         ["user"] = ("user123", "User")
     };
 
-    public User? ValidateUser(string username, string password)
+    public Task<User?> ValidateUserAsync(string username, string password)
     {
         if (_users.TryGetValue(username, out var userInfo) && ConstantTimeEquals(userInfo.Password, password))
         {
-            return new User(username, string.Empty, userInfo.Role);
+            return Task.FromResult<User?>(new User(username, string.Empty, userInfo.Role));
         }
-        return null;
+        return Task.FromResult<User?>(null);
     }
 
     /// <summary>
