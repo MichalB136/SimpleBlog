@@ -10,10 +10,36 @@ internal sealed class InMemoryUserRepository : IUserRepository
 
     public User? ValidateUser(string username, string password)
     {
-        if (_users.TryGetValue(username, out var userInfo) && userInfo.Password == password)
+        if (_users.TryGetValue(username, out var userInfo) && ConstantTimeEquals(userInfo.Password, password))
         {
             return new User(username, string.Empty, userInfo.Role);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Constant-time string comparison to prevent timing attacks on password validation.
+    /// </summary>
+    private static bool ConstantTimeEquals(string left, string right)
+    {
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        var leftBytes = System.Text.Encoding.UTF8.GetBytes(left);
+        var rightBytes = System.Text.Encoding.UTF8.GetBytes(right);
+
+        var maxLength = Math.Max(leftBytes.Length, rightBytes.Length);
+        var diff = 0;
+
+        for (var i = 0; i < maxLength; i++)
+        {
+            var lb = i < leftBytes.Length ? leftBytes[i] : (byte)0;
+            var rb = i < rightBytes.Length ? rightBytes[i] : (byte)0;
+            diff |= lb ^ rb;
+        }
+
+        return diff == 0 && leftBytes.Length == rightBytes.Length;
     }
 }

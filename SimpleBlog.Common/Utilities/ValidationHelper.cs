@@ -80,7 +80,7 @@ public static class ValidationHelper
         if (string.IsNullOrWhiteSpace(request.CustomerEmail))
             throw new ArgumentException("Customer email cannot be empty.", nameof(request.CustomerEmail));
 
-        if (!request.CustomerEmail.Contains("@"))
+        if (!IsValidEmail(request.CustomerEmail))
             throw new ArgumentException("Customer email is invalid.", nameof(request.CustomerEmail));
 
         if (string.IsNullOrWhiteSpace(request.ShippingAddress))
@@ -89,10 +89,9 @@ public static class ValidationHelper
         if (request.Items == null || request.Items.Count == 0)
             throw new ArgumentException("Order must contain at least one item.", nameof(request.Items));
 
-        foreach (var item in request.Items)
+        foreach (var item in request.Items.Where(i => i.Quantity <= 0))
         {
-            if (item.Quantity <= 0)
-                throw new ArgumentException("Item quantity must be greater than zero.", nameof(item.Quantity));
+            throw new ArgumentException("Item quantity must be greater than zero.", nameof(item.Quantity));
         }
     }
 
@@ -108,5 +107,24 @@ public static class ValidationHelper
 
         if (string.IsNullOrWhiteSpace(request.Password))
             throw new ArgumentException("Password cannot be empty.", nameof(request.Password));
+
+        if (request.Password.Length < 8)
+            throw new ArgumentException("Password must be at least 8 characters long.", nameof(request.Password));
+    }
+
+    /// <summary>
+    /// Validates email format using MailAddress class.
+    /// </summary>
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            _ = new System.Net.Mail.MailAddress(email);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

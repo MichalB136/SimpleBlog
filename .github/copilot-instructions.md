@@ -61,6 +61,8 @@ Krótki przewodnik dla AI (Copilot) i programistów pracujących nad `SimpleBlog
 
 ---
 
+After each change perfom tests to ensure nothing is broken.
+
 ---
 description: "This file provides guidelines for writing clean, maintainable, and idiomatic C# code with a focus on functional patterns and proper abstraction."
 ---
@@ -1386,3 +1388,9 @@ dotnet run --project SimpleBlog.ApiService
 6. **Secrets**: Use `AddParameter()` or Azure Key Vault integration - never commit secrets
 7. **Ports**: Let Aspire manage ports dynamically - reference in code, not hardcoded
 8. **Database**: For dev use `EnsureCreated()`, for prod use migrations with `Migrate()`
+
+
+## PostgreSQL:
+
+- Don't use sql scripts, all migrations must be done via EF Core Migrations
+- Don't use any other SQL provider other than localy hosted PostgreSQL via Docker

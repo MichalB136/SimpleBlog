@@ -252,7 +252,7 @@ Stosuj [Conventional Commits](https://www.conventionalcommits.org/):
 
 **Types:**
 - `feat:` - Nowa funkcja
-- `fix:` - Naprava błędu
+- `fix:` - Naprawa błędu
 - `chore:` - Aktualizacja dependencies, version itp.
 - `docs:` - Dokumentacja
 - `style:` - Formatowanie kodu
