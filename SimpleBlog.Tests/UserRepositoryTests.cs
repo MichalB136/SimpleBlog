@@ -21,6 +21,16 @@ public sealed class UserRepositoryTests
             }
             return Task.FromResult<User?>(null);
         }
+
+        public Task<(bool Success, string? ErrorMessage)> RegisterAsync(string username, string email, string password)
+        {
+            if (_users.ContainsKey(username))
+            {
+                return Task.FromResult<(bool Success, string? ErrorMessage)>((false, "Username already exists"));
+            }
+            _users[username] = (password, "User");
+            return Task.FromResult<(bool Success, string? ErrorMessage)>((true, null));
+        }
     }
 
     [Fact]

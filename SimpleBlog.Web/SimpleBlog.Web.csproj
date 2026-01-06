@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SimpleBlog.ServiceDefaults\SimpleBlog.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\SimpleBlog.Common\SimpleBlog.Common.csproj" />
   </ItemGroup>
 
 </Project>

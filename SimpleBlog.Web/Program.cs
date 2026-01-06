@@ -28,9 +28,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler();
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -40,6 +39,10 @@ var api = app.MapGroup("/api");
 api.MapPost(EndpointPaths.Login, 
     async (LoginRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Login, request, null, logger));
+
+api.MapPost("/register", 
+    async (SimpleBlog.Common.Models.RegisterRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPostRequest(factory, "/register", request, null, logger));
 
 // Posts
 api.MapGet(EndpointPaths.Posts, 

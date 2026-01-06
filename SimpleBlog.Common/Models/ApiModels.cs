@@ -1,10 +1,12 @@
 namespace SimpleBlog.Common.Models;
 
 // User model
-public record User(string Username, string Password, string Role);
+public record User(string Username, string Email, string Role);
 
 // Authentication
 public record LoginRequest(string Username, string Password);
+public record RegisterRequest(string Username, string Email, string Password);
+public record RegisterResponse(bool Success, string? Message);
 
 // Post DTOs
 public record CreatePostRequest(

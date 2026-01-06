@@ -25,6 +25,16 @@ public static class IdentitySeeder
         var adminPassword = configuration["AdminSeed:Password"] ?? "ChangeMe123!";
 
         await EnsureAdminAsync(userManager, adminUsername, adminEmail, adminPassword, adminRole, logger);
+
+        // Seed mock users (development only)
+        var mockUsers = configuration.GetSection("MockUsers").Get<List<MockUserConfig>>();
+        if (mockUsers != null)
+        {
+            foreach (var mockUser in mockUsers)
+            {
+                await EnsureMockUserAsync(userManager, mockUser.Username, mockUser.Email, mockUser.Password, userRole, logger);
+            }
+        }
     }
 
     private static async Task EnsureRoleAsync(RoleManager<IdentityRole<Guid>> roleManager, string roleName, ILogger logger)
@@ -79,4 +89,50 @@ public static class IdentitySeeder
             logger.LogWarning("Failed to assign admin role to {Username}: {Errors}", username, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
         }
     }
+
+    private static async Task EnsureMockUserAsync(
+        UserManager<ApplicationUser> userManager,
+        string username,
+        string email,
+        string password,
+        string userRole,
+        ILogger logger)
+    {
+        var user = await userManager.FindByNameAsync(username);
+        if (user is not null)
+        {
+            if (!await userManager.IsInRoleAsync(user, userRole))
+            {
+                await userManager.AddToRoleAsync(user, userRole);
+            }
+            return;
+        }
+
+        var newUser = new ApplicationUser
+        {
+            UserName = username,
+            Email = email,
+            EmailConfirmed = true
+        };
+
+        var createResult = await userManager.CreateAsync(newUser, password);
+        if (!createResult.Succeeded)
+        {
+            logger.LogWarning("Failed to create mock user {Username}: {Errors}", username, string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            return;
+        }
+
+        var roleResult = await userManager.AddToRoleAsync(newUser, userRole);
+        if (!roleResult.Succeeded)
+        {
+            logger.LogWarning("Failed to assign user role to {Username}: {Errors}", username, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+        }
+    }
+}
+
+internal sealed class MockUserConfig
+{
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }

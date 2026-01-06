@@ -38,7 +38,7 @@ async function request(path, options = {}) {
   return payload;
 }
 
-function LoginForm({ onLogin }) {
+function LoginForm({ onLogin, onShowRegister }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -81,7 +81,6 @@ function LoginForm({ onLogin }) {
           "div",
           { className: "card-body" },
           React.createElement("h2", { className: "card-title text-center mb-4" }, "Zaloguj się"),
-          React.createElement("p", { className: "text-muted text-center small mb-4" }, "Admin: admin/admin123 | User: user/user123"),
           React.createElement(
             "form",
             { onSubmit: handleSubmit },
@@ -112,6 +111,123 @@ function LoginForm({ onLogin }) {
               "button",
               { type: "submit", className: "btn btn-primary w-100", disabled: loading },
               loading ? "Logowanie..." : "Zaloguj"
+            ),
+            React.createElement(
+              "button",
+              { type: "button", className: "btn btn-outline-secondary w-100 mt-2", onClick: () => onShowRegister?.() },
+              "Zarejestruj się"
+            ),
+            error ? React.createElement("div", { className: "alert alert-danger mt-3 mb-0" }, error) : null
+          )
+        )
+      )
+    )
+  );
+}
+
+function RegisterForm({ onRegistered, onCancel }) {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Hasła muszą być takie same");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await request("/register", {
+        method: "POST",
+        body: JSON.stringify({ username, email, password }),
+      });
+      onRegistered?.();
+    } catch (err) {
+      setError(err.message || "Rejestracja nie powiodła się");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return React.createElement(
+    "div",
+    { className: "row justify-content-center mt-5" },
+    React.createElement(
+      "div",
+      { className: "col-md-6 col-lg-4" },
+      React.createElement(
+        "div",
+        { className: "card shadow" },
+        React.createElement(
+          "div",
+          { className: "card-body" },
+          React.createElement("h2", { className: "card-title text-center mb-4" }, "Zarejestruj się"),
+          React.createElement(
+            "form",
+            { onSubmit: handleSubmit },
+            React.createElement(
+              "div",
+              { className: "mb-3" },
+              React.createElement("label", { className: "form-label" }, "Nazwa użytkownika"),
+              React.createElement("input", {
+                className: "form-control",
+                value: username,
+                onChange: (e) => setUsername(e.target.value),
+                required: true,
+              })
+            ),
+            React.createElement(
+              "div",
+              { className: "mb-3" },
+              React.createElement("label", { className: "form-label" }, "Email"),
+              React.createElement("input", {
+                type: "email",
+                className: "form-control",
+                value: email,
+                onChange: (e) => setEmail(e.target.value),
+                required: true,
+              })
+            ),
+            React.createElement(
+              "div",
+              { className: "mb-3" },
+              React.createElement("label", { className: "form-label" }, "Hasło"),
+              React.createElement("input", {
+                type: "password",
+                className: "form-control",
+                value: password,
+                onChange: (e) => setPassword(e.target.value),
+                required: true,
+              })
+            ),
+            React.createElement(
+              "div",
+              { className: "mb-3" },
+              React.createElement("label", { className: "form-label" }, "Powtórz hasło"),
+              React.createElement("input", {
+                type: "password",
+                className: "form-control",
+                value: confirmPassword,
+                onChange: (e) => setConfirmPassword(e.target.value),
+                required: true,
+              })
+            ),
+            React.createElement(
+              "button",
+              { type: "submit", className: "btn btn-primary w-100", disabled: loading },
+              loading ? "Rejestrowanie..." : "Utwórz konto"
+            ),
+            React.createElement(
+              "button",
+              { type: "button", className: "btn btn-outline-secondary w-100 mt-2", onClick: () => onCancel?.() },
+              "Wróć do logowania"
             ),
             error ? React.createElement("div", { className: "alert alert-danger mt-3 mb-0" }, error) : null
           )
@@ -520,7 +636,12 @@ function ShopPage() {
     setLoading(true);
     try {
       const data = await request("/products");
-      setProducts(Array.isArray(data) ? data : []);
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+        ? data.items
+        : [];
+      setProducts(normalized);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1503,6 +1624,8 @@ function App() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState(currentUser);
+  const [showRegister, setShowRegister] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
   const [activeTab, setActiveTab] = useState("home");
 
   const handleLogin = (loggedInUser) => {
@@ -1516,13 +1639,30 @@ function App() {
     localStorage.removeItem("authToken");
     localStorage.removeItem("currentUser");
     setUser(null);
+    setShowRegister(false);
+    setAuthMessage("");
+  };
+
+  const handleRegisterSuccess = () => {
+    setAuthMessage("Konto zostało utworzone. Zaloguj się.");
+    setShowRegister(false);
+  };
+
+  const handleShowRegister = () => {
+    setAuthMessage("");
+    setShowRegister(true);
   };
 
   const refresh = async () => {
     setError("");
     try {
       const data = await request("/posts");
-      setPosts(Array.isArray(data) ? data : []);
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+        ? data.items
+        : [];
+      setPosts(normalized);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1598,7 +1738,10 @@ function App() {
         React.createElement("h1", { className: "display-4 fw-bold mb-3" }, "Twój lekki blog na React + .NET"),
         React.createElement("p", { className: "text-muted" }, "Zaloguj się, aby kontynuować")
       ),
-      React.createElement(LoginForm, { onLogin: handleLogin })
+      authMessage ? React.createElement("div", { className: "alert alert-success text-center" }, authMessage) : null,
+      showRegister
+        ? React.createElement(RegisterForm, { onRegistered: handleRegisterSuccess, onCancel: () => setShowRegister(false) })
+        : React.createElement(LoginForm, { onLogin: handleLogin, onShowRegister: handleShowRegister })
     );
   }
 
