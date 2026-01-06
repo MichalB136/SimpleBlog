@@ -80,7 +80,7 @@ public static class ValidationHelper
         if (string.IsNullOrWhiteSpace(request.CustomerEmail))
             throw new ArgumentException("Customer email cannot be empty.", nameof(request.CustomerEmail));
 
-        if (!request.CustomerEmail.Contains("@"))
+        if (!IsValidEmail(request.CustomerEmail))
             throw new ArgumentException("Customer email is invalid.", nameof(request.CustomerEmail));
 
         if (string.IsNullOrWhiteSpace(request.ShippingAddress))
@@ -108,5 +108,32 @@ public static class ValidationHelper
 
         if (string.IsNullOrWhiteSpace(request.Password))
             throw new ArgumentException("Password cannot be empty.", nameof(request.Password));
+
+        if (request.Password.Length < 8)
+            throw new ArgumentException("Password must be at least 8 characters long.", nameof(request.Password));
+    }
+
+    /// <summary>
+    /// Validates email format using MailAddress class.
+    /// </summary>
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            _ = new System.Net.Mail.MailAddress(email);
+            return true;
+        }
+        catch (System.FormatException)
+        {
+            // Expected for invalid email formats
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected exceptions to aid debugging while preserving the boolean contract
+            System.Console.Error.WriteLine(
+                $"[{nameof(ValidationHelper)}] Unexpected exception in {nameof(IsValidEmail)}: {ex.GetType().FullName}");
+            return false;
+        }
     }
 }

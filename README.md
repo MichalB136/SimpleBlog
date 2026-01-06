@@ -52,18 +52,67 @@ Dashboard będzie dostępny pod adresem wyświetlonym w konsoli (zazwyczaj `http
 Aplikacja składa się z:
 - **SimpleBlog.Web** - Aplikacja Blazor (frontend)
 - **SimpleBlog.ApiService** - API REST (backend)
-- **PostgreSQL** - Baza danych (kontener Docker via Aspire)
+- **PostgreSQL** - Baza danych (kontener Docker via docker-compose)
 
 ## Baza danych
 
-Projekt używa **PostgreSQL** jako bazy danych. Aspire automatycznie uruchamia kontener PostgreSQL podczas startu aplikacji.
+### Wymagania
 
-### Aspire Dashboard
+Projekt wymaga **PostgreSQL** uruchomionego przez **docker-compose** przed startem aplikacji.
 
-Po uruchomieniu `dotnet run --project SimpleBlog.AppHost` możesz:
-- Zobaczyć status PostgreSQL w Aspire Dashboard
-- Sprawdzić connection string w zakładce "Resources"
-- Monitorować logi bazy danych
+**WAŻNE: Musisz ręcznie uruchomić PostgreSQL przed aplikacją!**
+
+```powershell
+# Uruchom PostgreSQL i pgAdmin
+docker-compose up -d
+
+# Sprawdź status
+docker-compose ps
+```
+
+### Problem: Brak dostępu do Docker Hub
+
+Jeśli otrzymasz błąd "failed to authorize" przy `docker-compose up -d`:
+
+**Tymczasowe rozwiązanie - używaj SQLite:**
+```powershell
+# Uruchom z SQLite (bez Docker)
+.\start.ps1 -UseSqlite
+```
+
+Potem gdy będziesz mieć dostęp do Docker Hub:
+```powershell
+# Zaloguj się do Docker (jeśli potrzebujesz)
+docker login
+
+# Lub ustaw proxy jeśli jesteś za firewallem
+# Zobacz: https://docs.docker.com/config/daemon/
+```
+
+### Pierwszy uruchomienie
+
+Po uruchomieniu PostgreSQL, aplikacja automatycznie:
+- ✅ Zastosuje wszystkie migracje Entity Framework
+- ✅ Stworzy strukturę bazy danych
+- ✅ Będzie gotowa do pracy
+
+Wystarczy uruchomić aplikację:
+
+```powershell
+dotnet run --project SimpleBlog.AppHost
+# lub
+.\start.ps1
+```
+
+### Dostęp do bazy danych
+
+**PostgreSQL:**
+- Host: `localhost:5432`
+- Database: `simpleblog`
+- User: `simpleblog_user`
+- Password: `simpleblog_dev_password_123`
+
+Możesz użyć dowolnego klienta PostgreSQL do połączenia (pgAdmin zainstalowany lokalnie, Azure Data Studio, itp.)
 
 Więcej informacji w [docs/DATABASES.md](docs/DATABASES.md)
 
@@ -83,8 +132,9 @@ SimpleBlog/
 - .NET Aspire 13.1.0
 - Blazor
 - Entity Framework Core 9.0.10
-- PostgreSQL (Npgsql 9.0.4)
+- PostgreSQL (Npgsql 9.0.4) via docker-compose
 - ASP.NET Core Web API
+- Docker & Docker Compose
 
 ## Rozwiązywanie problemów
 

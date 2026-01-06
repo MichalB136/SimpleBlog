@@ -30,7 +30,7 @@ internal static class ApiProxyHelper
         try
         {
             var client = factory.CreateClient(ApiConstants.ClientName);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
             {
                 Content = JsonContent.Create(request)
             };
@@ -57,7 +57,7 @@ internal static class ApiProxyHelper
         try
         {
             var client = factory.CreateClient(ApiConstants.ClientName);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Put, path)
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Put, path)
             {
                 Content = JsonContent.Create(request)
             };
@@ -83,7 +83,7 @@ internal static class ApiProxyHelper
         try
         {
             var client = factory.CreateClient(ApiConstants.ClientName);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Delete, path);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, path);
 
             ForwardAuthorizationHeader(context, httpRequest);
 
@@ -106,7 +106,7 @@ internal static class ApiProxyHelper
         try
         {
             var client = factory.CreateClient(ApiConstants.ClientName);
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, path);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, path);
 
             ForwardAuthorizationHeader(context, httpRequest);
 

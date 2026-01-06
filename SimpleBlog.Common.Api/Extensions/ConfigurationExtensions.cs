@@ -36,7 +36,8 @@ public static class ConfigurationExtensions
         string environment,
         string? basePath = null)
     {
-        basePath ??= Directory.GetCurrentDirectory();
+        // Default to solution root directory (parent of current directory)
+        basePath ??= FindSolutionRoot(Directory.GetCurrentDirectory());
 
         // Load base configuration (required)
         configBuilder.AddJsonFile(
@@ -76,10 +77,16 @@ public static class ConfigurationExtensions
         this IConfiguration configuration)
     {
         var endpointConfig = new EndpointConfiguration();
-        configuration.GetSection("Endpoints").Bind(endpointConfig);
+        var endpointSection = configuration.GetSection("Endpoints");
+        if (!endpointSection.Exists())
+            throw new InvalidOperationException("Required configuration section 'Endpoints' is missing from appsettings.shared.json");
+        endpointSection.Bind(endpointConfig);
 
         var authConfig = new AuthorizationConfiguration();
-        configuration.GetSection("Authorization").Bind(authConfig);
+        var authSection = configuration.GetSection("Authorization");
+        if (!authSection.Exists())
+            throw new InvalidOperationException("Required configuration section 'Authorization' is missing from appsettings.shared.json");
+        authSection.Bind(authConfig);
 
         return (endpointConfig, authConfig);
     }
@@ -109,5 +116,32 @@ public static class ConfigurationExtensions
         services.AddSingleton(auth);
 
         return services;
+    }
+
+    /// <summary>
+    /// Finds the solution root directory by looking for .sln file in parent directories.
+    /// Limits traversal to prevent excessive directory tree walking.
+    /// </summary>
+    private static string FindSolutionRoot(string startPath)
+    {
+        var currentDir = new DirectoryInfo(startPath);
+        var maxDepth = 10;  // Prevent infinite traversal
+        var depth = 0;
+        
+        while (currentDir != null && depth < maxDepth)
+        {
+            // Check if .sln file exists in current directory
+            if (currentDir.GetFiles("*.sln").Length > 0)
+            {
+                return currentDir.FullName;
+            }
+            
+            // Move to parent directory
+            currentDir = currentDir.Parent;
+            depth++;
+        }
+        
+        // Fallback to current directory if .sln not found
+        return startPath;
     }
 }

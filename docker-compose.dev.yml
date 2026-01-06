@@ -1,0 +1,28 @@
+# Docker Compose for development with SQLite (no PostgreSQL needed)
+
+services:
+  # No database service needed - SQLite is file-based
+  # This file is kept for potential future additions like:
+  # - Redis cache
+  # - RabbitMQ message queue
+  # - Elasticsearch for search
+  
+  # Example: Add Redis cache (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: simpleblog-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - simpleblog-network
+
+# volumes:
+#   redis_data:
+#     driver: local
+
+# networks:
+#   simpleblog-network:
+#     driver: bridge
