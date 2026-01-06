@@ -17,7 +17,8 @@ public static class DatabaseExtensions
         var maskedConnectionString = connectionString.Contains("Password=")
             ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]*", "Password=***")
             : connectionString;
-        Console.WriteLine($"Using connection string: {maskedConnectionString}");
+        var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("DatabaseConfiguration");
+        logger.LogInformation("Using connection string: {ConnectionString}", maskedConnectionString);
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));

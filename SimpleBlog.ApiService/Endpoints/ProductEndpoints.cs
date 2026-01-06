@@ -10,7 +10,6 @@ public static class ProductEndpoints
     public static void MapProductEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
-        var authConfig = app.Services.GetRequiredService<AuthorizationConfiguration>();
 
         var products = app.MapGroup(endpointConfig.Products.Base);
 

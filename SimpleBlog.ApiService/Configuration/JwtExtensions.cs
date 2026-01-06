@@ -17,7 +17,8 @@ public static class JwtExtensions
         var jwtAudience = jwtConfig["Audience"] ?? "SimpleBlog";
         var key = Encoding.UTF8.GetBytes(jwtKey);
 
-        Console.WriteLine($"JWT Config - Key length: {jwtKey.Length}, Issuer: {jwtIssuer}, Audience: {jwtAudience}");
+        var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("JwtConfiguration");
+        logger.LogInformation("JWT Config - Key length: {KeyLength}, Issuer: {Issuer}, Audience: {Audience}", jwtKey.Length, jwtIssuer, jwtAudience);
 
         builder.Services.AddAuthentication(options =>
         {

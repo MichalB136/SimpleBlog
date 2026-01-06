@@ -10,7 +10,6 @@ public static class PostEndpoints
     public static void MapPostEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
-        var authConfig = app.Services.GetRequiredService<AuthorizationConfiguration>();
 
         var posts = app.MapGroup(endpointConfig.Posts.Base);
 

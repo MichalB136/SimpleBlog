@@ -17,6 +17,8 @@ public sealed class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        
         // Skip health checks to reduce noise
         var path = context.Request.Path.HasValue ? context.Request.Path.Value! : string.Empty;
         if (path.StartsWith("/health", StringComparison.OrdinalIgnoreCase))
@@ -72,10 +74,14 @@ public sealed class RequestLoggingMiddleware
     {
         const string headerName = "X-Correlation-ID";
 
-        if (context.Request.Headers.TryGetValue(headerName, out var existing) && !string.IsNullOrWhiteSpace(existing))
+        if (context.Request.Headers.TryGetValue(headerName, out var existing))
         {
-            context.Response.Headers[headerName] = existing.ToString();
-            return existing!;
+            var existingValue = existing.ToString();
+            if (!string.IsNullOrWhiteSpace(existingValue))
+            {
+                context.Response.Headers[headerName] = existingValue;
+                return existingValue;
+            }
         }
 
         var id = context.TraceIdentifier;

@@ -10,7 +10,6 @@ public static class OrderEndpoints
     public static void MapOrderEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
-        var authConfig = app.Services.GetRequiredService<AuthorizationConfiguration>();
 
         var orders = app.MapGroup(endpointConfig.Orders.Base);
 
