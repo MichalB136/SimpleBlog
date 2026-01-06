@@ -44,13 +44,11 @@ dotnet run --project SimpleBlog.AppHost
 
 - **Aplikacja web:** Sprawdź URL w Aspire Dashboard
 - **Aspire Dashboard:** URL wyświetlony w konsoli
-- **pgAdmin:** http://localhost:5050
-  - Email: `admin@simpleblog.local`
-  - Password: `admin`
 - **PostgreSQL:** localhost:5432
   - Database: `simpleblog`
   - User: `simpleblog_user`
   - Password: `simpleblog_dev_password_123`
+  - Połączyć można za pomocą dowolnego klienta PostgreSQL (pgAdmin, Azure Data Studio, itp.)
 
 ---
 
@@ -98,9 +96,8 @@ docker-compose restart postgres
 - **User:** simpleblog_user
 - **Password:** simpleblog_dev_password_123
 
-**pgAdmin Web UI:**
-- URL: http://localhost:5050
-- Login: admin@simpleblog.local / admin
+**Dostęp do bazy danych:**
+Możesz użyć dowolnego klienta PostgreSQL (pgAdmin zainstalowany lokalnie, Azure Data Studio, DBeaver, itp.). Skonfiguruj połączenie, używając powyższych szczegółów.
 
 ---
 

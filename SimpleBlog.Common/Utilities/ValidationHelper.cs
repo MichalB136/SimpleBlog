@@ -89,9 +89,10 @@ public static class ValidationHelper
         if (request.Items == null || request.Items.Count == 0)
             throw new ArgumentException("Order must contain at least one item.", nameof(request.Items));
 
-        foreach (var item in request.Items.Where(i => i.Quantity <= 0))
+        foreach (var item in request.Items)
         {
-            throw new ArgumentException("Item quantity must be greater than zero.", nameof(item.Quantity));
+            if (item.Quantity <= 0)
+                throw new ArgumentException("Item quantity must be greater than zero.", nameof(item.Quantity));
         }
     }
 
@@ -122,8 +123,16 @@ public static class ValidationHelper
             _ = new System.Net.Mail.MailAddress(email);
             return true;
         }
-        catch
+        catch (System.FormatException)
         {
+            // Expected for invalid email formats
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected exceptions to aid debugging while preserving the boolean contract
+            System.Console.Error.WriteLine(
+                $"[{nameof(ValidationHelper)}] Unexpected exception in {nameof(IsValidEmail)}: {ex.GetType().FullName}");
             return false;
         }
     }

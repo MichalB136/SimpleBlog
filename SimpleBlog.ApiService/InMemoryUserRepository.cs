@@ -27,19 +27,14 @@ internal sealed class InMemoryUserRepository : IUserRepository
             return false;
         }
 
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
         var leftBytes = System.Text.Encoding.UTF8.GetBytes(left);
         var rightBytes = System.Text.Encoding.UTF8.GetBytes(right);
 
-        var maxLength = Math.Max(leftBytes.Length, rightBytes.Length);
-        var diff = 0;
-
-        for (var i = 0; i < maxLength; i++)
-        {
-            var lb = i < leftBytes.Length ? leftBytes[i] : (byte)0;
-            var rb = i < rightBytes.Length ? rightBytes[i] : (byte)0;
-            diff |= lb ^ rb;
-        }
-
-        return diff == 0 && leftBytes.Length == rightBytes.Length;
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
     }
 }

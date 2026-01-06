@@ -70,10 +70,9 @@ Write-Host "   Database: simpleblog" -ForegroundColor White
 Write-Host "   User: simpleblog_user" -ForegroundColor White
 Write-Host "   Password: simpleblog_dev_password_123" -ForegroundColor White
 Write-Host ""
-Write-Host "🔧 pgAdmin Access:" -ForegroundColor Cyan
-Write-Host "   URL: http://localhost:5050" -ForegroundColor White
-Write-Host "   Email: admin@simpleblog.local" -ForegroundColor White
-Write-Host "   Password: admin" -ForegroundColor White
+Write-Host "🔧 Database Tools:" -ForegroundColor Cyan
+Write-Host "   You can connect using pgAdmin or any PostgreSQL client" -ForegroundColor White
+Write-Host "   Use the connection details shown above when configuring your client." -ForegroundColor White
 Write-Host ""
 
 # Build solution

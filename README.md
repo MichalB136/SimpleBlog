@@ -112,9 +112,7 @@ dotnet run --project SimpleBlog.AppHost
 - User: `simpleblog_user`
 - Password: `simpleblog_dev_password_123`
 
-**pgAdmin:** http://localhost:5050
-- Email: `admin@simpleblog.local`
-- Password: `admin`
+Możesz użyć dowolnego klienta PostgreSQL do połączenia (pgAdmin zainstalowany lokalnie, Azure Data Studio, itp.)
 
 Więcej informacji w [docs/DATABASES.md](docs/DATABASES.md)
 

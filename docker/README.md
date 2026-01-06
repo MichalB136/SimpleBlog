@@ -67,14 +67,13 @@ No manual migration commands needed!
   - Username: `simpleblog_user`
   - Password: `simpleblog_dev_password_123`
 
-- **pgAdmin (Database GUI):**
-  - URL: http://localhost:5050
-  - Email: `admin@simpleblog.local`
-  - Password: `admin`
-
 - **Aspire Dashboard:**
   - URL shown in console when running AppHost
   - Monitors application services (not database)
+
+- **Database Client:**
+  - Use any PostgreSQL client (pgAdmin, Azure Data Studio, DBeaver, etc.) installed locally
+  - Connect using the PostgreSQL credentials shown above
 
 ---
 
@@ -104,10 +103,9 @@ docker-compose logs -f postgres
   - Username: `simpleblog_user`
   - Password: `simpleblog_dev_password_123`
 
-- **pgAdmin (Database GUI):**
-  - URL: http://localhost:5050
-  - Email: `admin@simpleblog.local`
-  - Password: `admin`
+- **Database Client:**
+  - Use any PostgreSQL client (pgAdmin, Azure Data Studio, DBeaver, etc.) installed locally
+  - Connect using the PostgreSQL credentials shown above
 
 **Note:** When using manual docker-compose, you need to update connection strings in `appsettings.shared.Development.json` to match the manual setup.
 
@@ -154,21 +152,20 @@ dotnet run --project SimpleBlog.AppHost
 ---
 
 ## 📊 pgAdmin Setup
+Optional: External Database Client
 
-1. Open http://localhost:5050
-2. Login with credentials from above
-3. **Add Server:**
-   - Right-click "Servers" → Register → Server
-   - **General Tab:**
-     - Name: `SimpleBlog Local`
-   - **Connection Tab:**
-     - Host: `postgres` (use container name when pgAdmin is in same network)
+pgAdmin is **not** managed by this `docker-compose` setup. If you prefer a GUI client, install pgAdmin (or any other PostgreSQL client) locally and connect to the running PostgreSQL instance:
+
+1. Start your preferred PostgreSQL client (e.g., pgAdmin installed on your machine)
+2. Create a new connection / server:
+   - **General / Name:** `SimpleBlog Local`
+   - **Connection:**
+     - Host: `localhost` (or the host where your PostgreSQL instance is exposed)
      - Port: `5432`
      - Database: `simpleblog`
      - Username: `simpleblog_user`
-     - Password: `simpleblog_dev_password_123`
-   - Save
-
+     - Password: `simpleblog_dev_password_123` (development only)
+3. Save and connect
 ---
 
 ## 🔧 Management Commands

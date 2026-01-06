@@ -120,12 +120,15 @@ public static class ConfigurationExtensions
 
     /// <summary>
     /// Finds the solution root directory by looking for .sln file in parent directories.
+    /// Limits traversal to prevent excessive directory tree walking.
     /// </summary>
     private static string FindSolutionRoot(string startPath)
     {
         var currentDir = new DirectoryInfo(startPath);
+        var maxDepth = 10;  // Prevent infinite traversal
+        var depth = 0;
         
-        while (currentDir != null)
+        while (currentDir != null && depth < maxDepth)
         {
             // Check if .sln file exists in current directory
             if (currentDir.GetFiles("*.sln").Length > 0)
@@ -135,6 +138,7 @@ public static class ConfigurationExtensions
             
             // Move to parent directory
             currentDir = currentDir.Parent;
+            depth++;
         }
         
         // Fallback to current directory if .sln not found
