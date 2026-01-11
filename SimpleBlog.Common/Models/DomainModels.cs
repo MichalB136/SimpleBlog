@@ -19,12 +19,12 @@ public record Comment(
     DateTimeOffset CreatedAt
 );
 
-    public record AboutMe(
-        Guid Id,
-        string Content,
-        DateTimeOffset UpdatedAt,
-        string UpdatedBy
-    );
+public record AboutMe(
+    Guid Id,
+    string Content,
+    DateTimeOffset UpdatedAt,
+    string UpdatedBy
+);
 
 public record Product(
     Guid Id,

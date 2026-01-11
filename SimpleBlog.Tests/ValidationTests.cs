@@ -433,4 +433,85 @@ public sealed class ValidationTests
         // Assert
         Assert.True(result.IsValid);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void UpdateAboutMeRequestValidator_EmptyContent_FailsValidation(string? content)
+    {
+        // Arrange
+        var validator = new UpdateAboutMeRequestValidator();
+        var request = new UpdateAboutMeRequest(content!);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Content" && e.ErrorMessage.Contains("required"));
+    }
+
+    [Fact]
+    public void UpdateAboutMeRequestValidator_ContentExceedsMaxLength_FailsValidation()
+    {
+        // Arrange
+        var validator = new UpdateAboutMeRequestValidator();
+        var longContent = new string('A', 10001); // Exceeds 10000 character limit
+        var request = new UpdateAboutMeRequest(longContent);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Content" && e.ErrorMessage.Contains("10000"));
+    }
+
+    [Fact]
+    public void UpdateAboutMeRequestValidator_ValidContent_PassesValidation()
+    {
+        // Arrange
+        var validator = new UpdateAboutMeRequestValidator();
+        var request = new UpdateAboutMeRequest("This is valid about me content.");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void UpdateAboutMeRequestValidator_ContentAtMaxLength_PassesValidation()
+    {
+        // Arrange
+        var validator = new UpdateAboutMeRequestValidator();
+        var maxLengthContent = new string('A', 10000); // Exactly at limit
+        var request = new UpdateAboutMeRequest(maxLengthContent);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void UpdateAboutMeRequestValidator_ContentWithSpecialCharacters_PassesValidation()
+    {
+        // Arrange
+        var validator = new UpdateAboutMeRequestValidator();
+        var contentWithSpecialChars = "Hello! This is my about page. <b>HTML</b> & special chars: 你好, émojis: 😊, etc.";
+        var request = new UpdateAboutMeRequest(contentWithSpecialChars);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
 }
