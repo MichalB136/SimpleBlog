@@ -6,12 +6,13 @@ import { usePosts } from '@/hooks/usePosts';
 import { PostList } from '@/components/posts/PostList';
 import { AboutPage } from '@/components/common/AboutPage';
 import { ShopPage } from '@/components/shop/ShopPage';
+import { CartPage } from '@/components/shop/CartPage';
 import { ContactPage } from '@/components/common/ContactPage';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'home' | 'about' | 'shop' | 'contact' | 'login' | 'register';
+type Tab = 'home' | 'about' | 'shop' | 'cart' | 'contact' | 'login' | 'register';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -96,7 +97,8 @@ function App() {
                 )
               )}
               {activeTab === 'about' && <AboutPage />}
-              {activeTab === 'shop' && <ShopPage />}
+              {activeTab === 'shop' && <ShopPage onViewCart={() => setActiveTab('cart')} />}
+              {activeTab === 'cart' && <CartPage />}
               {activeTab === 'contact' && <ContactPage />}
             </div>
           </div>

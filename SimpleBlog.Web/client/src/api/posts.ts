@@ -1,9 +1,9 @@
 import { apiClient } from './client';
-import type { Post, CreatePostRequest, UpdatePostRequest, Comment, CreateCommentRequest } from '@/types/post';
+import type { Post, CreatePostRequest, UpdatePostRequest, Comment, CreateCommentRequest, PaginatedResponse } from '@/types/post';
 
 export const postsApi = {
   getAll: (page: number = 1, pageSize: number = 10) =>
-    apiClient.get<Post[]>(`/posts?page=${page}&pageSize=${pageSize}`),
+    apiClient.get<PaginatedResponse<Post>>(`/posts?page=${page}&pageSize=${pageSize}`),
   getById: (id: string) => apiClient.get<Post>(`/posts/${id}`),
   create: (request: CreatePostRequest) => apiClient.post<Post>('/posts', request),
   update: (id: string, request: UpdatePostRequest) => apiClient.put<Post>(`/posts/${id}`, request),

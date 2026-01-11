@@ -11,7 +11,8 @@ export function useProducts() {
     setError('');
     try {
       const data = await productsApi.getAll();
-      setProducts(Array.isArray(data) ? data : []);
+      // API returns paginated response with items array
+      setProducts(data.items && Array.isArray(data.items) ? data.items : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load products');
     } finally {

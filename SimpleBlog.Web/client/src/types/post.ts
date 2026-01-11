@@ -9,6 +9,16 @@ export interface Post {
   comments?: Comment[];
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 export interface CreatePostRequest {
   title: string;
   content: string;

@@ -19,7 +19,8 @@ export function usePosts() {
     setError('');
     try {
       const data = await postsApi.getAll();
-      const normalized: Post[] = Array.isArray(data) ? data : [];
+      // API returns paginated response with items array
+      const normalized: Post[] = data.items && Array.isArray(data.items) ? data.items : [];
       setPosts(sortPosts(normalized));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load posts');

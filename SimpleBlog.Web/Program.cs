@@ -32,22 +32,101 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Serve static files from wwwroot/dist (Vite build output)
-var distPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "dist");
-if (Directory.Exists(distPath))
+// In development, proxy frontend requests to Vite dev server
+if (app.Environment.IsDevelopment())
 {
-    app.UseStaticFiles(new StaticFileOptions
+    var viteHttpClient = new HttpClient
     {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-            Path.Combine(app.Environment.ContentRootPath, "wwwroot")),
-        RequestPath = ""
+        BaseAddress = new Uri("http://localhost:5173"),
+        Timeout = TimeSpan.FromSeconds(30)
+    };
+
+    app.Use(async (context, next) =>
+    {
+        // Skip API and health check routes
+        if (context.Request.Path.StartsWithSegments("/api") || 
+            context.Request.Path.StartsWithSegments("/health") ||
+            context.Request.Path.StartsWithSegments("/.well-known"))
+        {
+            await next();
+            return;
+        }
+
+        try
+        {
+            var requestPath = context.Request.Path.Value ?? "/";
+            var requestUrl = $"{requestPath}{context.Request.QueryString}";
+
+            var proxyRequest = new HttpRequestMessage(
+                new HttpMethod(context.Request.Method),
+                requestUrl);
+
+            // Copy headers
+            foreach (var header in context.Request.Headers)
+            {
+                if (!header.Key.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                {
+                    proxyRequest.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
+                }
+            }
+
+            // Copy body if present
+            if (context.Request.ContentLength > 0)
+            {
+                proxyRequest.Content = new StreamContent(context.Request.Body);
+                if (context.Request.ContentType != null)
+                {
+                    proxyRequest.Content.Headers.ContentType = 
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(context.Request.ContentType);
+                }
+            }
+
+            var response = await viteHttpClient.SendAsync(proxyRequest);
+
+            context.Response.StatusCode = (int)response.StatusCode;
+
+            foreach (var header in response.Content.Headers)
+            {
+                context.Response.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            foreach (var header in response.Headers)
+            {
+                context.Response.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            await response.Content.CopyToAsync(context.Response.Body);
+        }
+        catch
+        {
+            // Fallback to next middleware on error
+            await next();
+        }
     });
 }
 else
 {
-    // Fallback for development: serve from wwwroot
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
+    // Production: Serve static files from dist/
+    var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+    var distPath = Path.Combine(wwwrootPath, "dist");
+
+    // 1) Serve root static files (favicon, etc.)
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath),
+        RequestPath = ""
+    });
+
+    // 2) Serve built assets from /assets mapped to dist/assets
+    var assetsPath = Path.Combine(distPath, "assets");
+    if (Directory.Exists(assetsPath))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(assetsPath),
+            RequestPath = "/assets"
+        });
+    }
 }
 
 var api = app.MapGroup("/api");
@@ -141,8 +220,12 @@ api.MapPut(EndpointPaths.AboutMe,
     async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
-// SPA fallback to Vite-built index in dist
-app.MapFallbackToFile("dist/index.html");
+// SPA fallback to Vite-built index in dist (production only)
+if (!app.Environment.IsDevelopment())
+{
+    app.MapFallbackToFile("dist/index.html");
+}
+
 app.MapHealthChecks("/health");
 app.MapDefaultEndpoints();
 

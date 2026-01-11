@@ -20,6 +20,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       }
+    },
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+      protocol: 'ws'
     }
   },
   resolve: {

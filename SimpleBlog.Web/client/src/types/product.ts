@@ -5,6 +5,18 @@ export interface Product {
   price: number;
   stock: number;
   imageUrl?: string;
+  category?: string;
+  createdAt?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface CreateProductRequest {
