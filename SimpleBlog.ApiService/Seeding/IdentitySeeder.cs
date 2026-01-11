@@ -130,9 +130,31 @@ public static class IdentitySeeder
     }
 }
 
+/// <summary>
+/// Configuration model for seeding mock user accounts.
+/// </summary>
+/// <remarks>
+/// This type is intended for <c>Development</c> / local testing only.
+/// Do <b>not</b> bind real or production credentials to this configuration,
+/// and do not use it in production environments. For any non-trivial scenario,
+/// prefer using ASP.NET Core user secrets or environment variables for seed passwords
+/// rather than committing them to <c>appsettings*.json</c>.
+/// </remarks>
 internal sealed class MockUserConfig
 {
     public string Username { get; set; } = string.Empty;
+
     public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Plain-text password used to create the mock user in development.
+    /// </summary>
+    /// <remarks>
+    /// This value is intended only for local development and test environments.
+    /// Do not store sensitive or real user passwords here, and do not commit
+    /// production secrets to configuration files. Use user secrets or environment
+    /// variables if a seeded password is required.
+    /// </remarks>
     public string Password { get; set; } = string.Empty;
 }
+

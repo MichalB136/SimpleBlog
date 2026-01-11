@@ -89,6 +89,7 @@ function LoginForm({ onLogin, onShowRegister }) {
               { className: "mb-3" },
               React.createElement("label", { className: "form-label" }, "Nazwa użytkownika"),
               React.createElement("input", {
+                type: "text",
                 className: "form-control",
                 value: username,
                 onChange: (e) => setUsername(e.target.value),
@@ -177,6 +178,7 @@ function RegisterForm({ onRegistered, onCancel }) {
               { className: "mb-3" },
               React.createElement("label", { className: "form-label" }, "Nazwa użytkownika"),
               React.createElement("input", {
+                type: "text",
                 className: "form-control",
                 value: username,
                 onChange: (e) => setUsername(e.target.value),

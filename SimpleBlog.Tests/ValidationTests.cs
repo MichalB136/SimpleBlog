@@ -1,4 +1,5 @@
 using SimpleBlog.Common;
+using SimpleBlog.Common.Validators;
 
 namespace SimpleBlog.Tests;
 
@@ -275,5 +276,161 @@ public sealed class ValidationTests
         // Assert
         Assert.Equal(73.25m, order.TotalAmount);
         Assert.Equal(order.TotalAmount, calculatedTotal);
+    }
+
+    [Fact]
+    public void RegisterRequestValidator_ValidData_Succeeds()
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser123", "test@example.com", "Password123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void RegisterRequestValidator_EmptyUsername_FailsValidation(string? username)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest(username ?? "", "test@example.com", "Password123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Username");
+    }
+
+    [Theory]
+    [InlineData("ab")]  // Too short
+    [InlineData("a")]   // Too short
+    public void RegisterRequestValidator_UsernameTooShort_FailsValidation(string username)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest(username, "test@example.com", "Password123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Username" && e.ErrorMessage.Contains("at least 3"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void RegisterRequestValidator_EmptyEmail_FailsValidation(string? email)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", email ?? "", "Password123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Email");
+    }
+
+    [Theory]
+    [InlineData("invalid-email")]
+    [InlineData("@example.com")]
+    [InlineData("test@")]
+    [InlineData("test")]
+    public void RegisterRequestValidator_InvalidEmailFormat_FailsValidation(string email)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", email, "Password123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Email");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public void RegisterRequestValidator_EmptyPassword_FailsValidation(string? password)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", "test@example.com", password ?? "");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Password");
+    }
+
+    [Theory]
+    [InlineData("Pass1!")]  // Too short
+    [InlineData("Pass1")]   // Too short and no special char
+    public void RegisterRequestValidator_PasswordTooShort_FailsValidation(string password)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", "test@example.com", password);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "Password");
+    }
+
+    [Theory]
+    [InlineData("password123!")]  // No uppercase
+    [InlineData("PASSWORD123!")]  // No lowercase
+    [InlineData("Password!")]     // No digit
+    [InlineData("Password123")]   // No special char
+    public void RegisterRequestValidator_PasswordMissingRequirement_FailsValidation(string password)
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", "test@example.com", password);
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.NotEmpty(result.Errors);
+        Assert.Single(result.Errors, e => e.PropertyName == "Password");
+    }
+
+    [Fact]
+    public void RegisterRequestValidator_ValidPasswordWithSpecialChar_Succeeds()
+    {
+        // Arrange
+        var validator = new RegisterRequestValidator();
+        var request = new RegisterRequest("testuser", "test@example.com", "SecurePass123!");
+
+        // Act
+        var result = validator.Validate(request);
+
+        // Assert
+        Assert.True(result.IsValid);
     }
 }

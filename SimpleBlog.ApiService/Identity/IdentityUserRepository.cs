@@ -40,10 +40,20 @@ internal sealed class IdentityUserRepository : IUserRepository
 
     public async Task<(bool Success, string? ErrorMessage)> RegisterAsync(string username, string email, string password)
     {
+        ArgumentNullException.ThrowIfNull(username);
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(password);
+
         var existingUser = await _userManager.FindByNameAsync(username);
         if (existingUser is not null)
         {
             return (false, "Username already exists");
+        }
+
+        var existingByEmail = await _userManager.FindByEmailAsync(email);
+        if (existingByEmail is not null)
+        {
+            return (false, "Email already exists");
         }
 
         var newUser = new ApplicationUser
