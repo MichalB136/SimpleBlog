@@ -9,6 +9,7 @@ public class EndpointConfiguration
     public string Login { get; set; } = "/login";
     public string Register { get; set; } = "/register";
     public PostsEndpoints Posts { get; set; } = new();
+    public AboutMeEndpoints AboutMe { get; set; } = new();
     public ProductsEndpoints Products { get; set; } = new();
     public OrdersEndpoints Orders { get; set; } = new();
     public string Health { get; set; } = "/health";
@@ -28,6 +29,16 @@ public class PostsEndpoints
     public string Delete { get; set; } = "/{id:guid}";
     public string GetComments { get; set; } = "/{id:guid}/comments";
     public string AddComment { get; set; } = "/{id:guid}/comments";
+}
+
+/// <summary>
+/// AboutMe endpoint path configuration.
+/// </summary>
+public class AboutMeEndpoints
+{
+    public string Base { get; set; } = "/aboutme";
+    public string Get { get; set; } = "";
+    public string Update { get; set; } = "";
 }
 
 /// <summary>

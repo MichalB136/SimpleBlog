@@ -10,6 +10,7 @@ public class BlogDbContext : DbContext
 
     public DbSet<PostEntity> Posts { get; set; } = null!;
     public DbSet<CommentEntity> Comments { get; set; } = null!;
+    public DbSet<AboutMeEntity> AboutMe { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,14 @@ public class BlogDbContext : DbContext
             entity.Property(e => e.Author).IsRequired();
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<AboutMeEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.Property(e => e.UpdatedBy).IsRequired();
         });
     }
 }

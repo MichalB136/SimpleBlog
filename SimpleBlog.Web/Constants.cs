@@ -13,6 +13,9 @@ internal static class EndpointPaths
     public const string Login = "/login";
     public const string Register = "/register";
     
+    // AboutMe
+    public const string AboutMe = "/aboutme";
+    
     // Posts
     public const string Posts = "/posts";
     public const string PostsById = "/posts/{0}";

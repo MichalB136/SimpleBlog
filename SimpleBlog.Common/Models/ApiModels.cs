@@ -28,6 +28,11 @@ public record CreateCommentRequest(
     string? Content
 );
 
+    // AboutMe DTOs
+    public record UpdateAboutMeRequest(
+        string Content
+    );
+
 // Product DTOs
 public record CreateProductRequest(
     string Name,

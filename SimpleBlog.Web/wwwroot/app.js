@@ -586,6 +586,49 @@ function PostList({ posts, onDelete, onAddComment }) {
 }
 
 function AboutPage() {
+  const [about, setAbout] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [content, setContent] = useState("");
+  const isAdmin = currentUser?.role === "Admin";
+
+  useEffect(() => {
+    loadAbout();
+  }, []);
+
+  const loadAbout = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await request("/aboutme");
+      setAbout(data);
+      setContent(data?.content || "");
+    } catch (err) {
+      // NotFound -> allow creating new
+      setAbout(null);
+      setContent("");
+      if (err.message && err.message !== "Not Found") {
+        setError("Nie udało się pobrać sekcji 'O mnie'");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await request("/aboutme", {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      });
+      setEditMode(false);
+      await loadAbout();
+    } catch (err) {
+      setError(err.message || "Nie udało się zapisać zmian");
+    }
+  };
+
   return React.createElement(
     "div",
     { className: "card shadow-sm" },
@@ -593,25 +636,50 @@ function AboutPage() {
       "div",
       { className: "card-body p-5" },
       React.createElement("h2", { className: "mb-4" }, "O mnie"),
-      React.createElement("p", { className: "lead mb-4" }, "Witaj na moim blogu!"),
-      React.createElement(
-        "p",
-        null,
-        "Jestem pasjonatem programowania, który uwielbia dzielić się wiedzą i doświadczeniem. Na tym blogu znajdziesz artykuły o technologii, programowaniu i nie tylko."
-      ),
-      React.createElement(
-        "p",
-        null,
-        "Blog został zbudowany przy użyciu:",
-        React.createElement(
-          "ul",
-          { className: "mt-2" },
-          React.createElement("li", null, "React 18 - frontend"),
-          React.createElement("li", null, ".NET 9 + Aspire - backend"),
-          React.createElement("li", null, "Bootstrap 5 - stylowanie"),
-          React.createElement("li", null, "SQLite - baza danych")
-        )
-      )
+      loading
+        ? React.createElement("p", { className: "text-muted" }, "Ładowanie...")
+        : error
+          ? React.createElement("div", { className: "alert alert-danger" }, error)
+          : editMode && isAdmin
+            ? React.createElement(
+                React.Fragment,
+                null,
+                React.createElement("textarea", {
+                  className: "form-control mb-3",
+                  rows: 10,
+                  value: content,
+                  onChange: (e) => setContent(e.target.value),
+                  placeholder: "Wpisz treść sekcji 'O mnie'",
+                }),
+                React.createElement(
+                  "div",
+                  { className: "d-flex gap-2" },
+                  React.createElement(
+                    "button",
+                    { className: "btn btn-primary", onClick: handleSave },
+                    "Zapisz"
+                  ),
+                  React.createElement(
+                    "button",
+                    { className: "btn btn-secondary", onClick: () => setEditMode(false) },
+                    "Anuluj"
+                  )
+                )
+              )
+            : React.createElement(
+                React.Fragment,
+                null,
+                React.createElement(
+                  "p",
+                  { className: "lead mb-4" },
+                  about?.content || "Brak treści."
+                ),
+                isAdmin && React.createElement(
+                  "button",
+                  { className: "btn btn-outline-primary", onClick: () => setEditMode(true) },
+                  "Edytuj"
+                )
+              )
     )
   );
 }

@@ -13,6 +13,12 @@ public interface IPostRepository
     Task<Comment?> AddCommentAsync(Guid postId, CreateCommentRequest request);
 }
 
+public interface IAboutMeRepository
+{
+    Task<AboutMe?> GetAsync();
+    Task<AboutMe> UpdateAsync(UpdateAboutMeRequest request, string updatedBy);
+}
+
 public interface IProductRepository
 {
     Task<PaginatedResult<Product>> GetAllAsync(int page = 1, int pageSize = 10);
