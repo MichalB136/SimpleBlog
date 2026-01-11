@@ -108,6 +108,15 @@ api.MapPost(EndpointPaths.Orders,
     async (CreateOrderRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Orders, request, null, logger));
 
+// AboutMe
+api.MapGet(EndpointPaths.AboutMe,
+    async (IHttpClientFactory factory, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyGetRequest(factory, EndpointPaths.AboutMe, logger));
+
+api.MapPut(EndpointPaths.AboutMe,
+    async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
+
 app.MapFallbackToFile("index.html");
 app.MapHealthChecks("/health");
 app.MapDefaultEndpoints();

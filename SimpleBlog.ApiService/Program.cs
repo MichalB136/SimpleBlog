@@ -94,6 +94,7 @@ app.MapHealthChecks(endpointConfig.Health);
 // Map all endpoints
 app.MapAuthEndpoints(jwtIssuer, jwtAudience, jwtKey);
 app.MapPostEndpoints();
+app.MapAboutMeEndpoints();
 app.MapProductEndpoints();
 app.MapOrderEndpoints();
 

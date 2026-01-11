@@ -32,6 +32,9 @@ public sealed record CreateCommentRequest(
     string Content, 
     string Author);
 
+public sealed record UpdateAboutMeRequest(
+    string Content);
+
 public sealed record LoginRequest(
     string Username, 
     string Password);

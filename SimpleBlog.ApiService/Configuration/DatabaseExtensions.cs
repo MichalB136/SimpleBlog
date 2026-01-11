@@ -56,6 +56,7 @@ public static class DatabaseExtensions
 
         // Register repositories from service layers
         builder.Services.AddScoped<IPostRepository, EfPostRepository>();
+        builder.Services.AddScoped<IAboutMeRepository, EfAboutMeRepository>();
         builder.Services.AddScoped<IProductRepository, EfProductRepository>();
         builder.Services.AddScoped<IOrderRepository, EfOrderRepository>();
     }

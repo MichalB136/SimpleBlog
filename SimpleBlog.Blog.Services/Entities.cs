@@ -22,3 +22,11 @@ public class CommentEntity
 
     public PostEntity? Post { get; set; }
 }
+
+public class AboutMeEntity
+{
+    public Guid Id { get; set; }
+    public string Content { get; set; } = null!;
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string UpdatedBy { get; set; } = null!;
+}
