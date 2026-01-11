@@ -20,6 +20,8 @@ public static class PostEndpoints
         posts.MapDelete(endpointConfig.Posts.Delete, Delete).RequireAuthorization();
         posts.MapGet(endpointConfig.Posts.GetComments, GetComments);
         posts.MapPost(endpointConfig.Posts.AddComment, AddComment);
+        posts.MapPut("/{id:guid}/pin", PinPost).RequireAuthorization();
+        posts.MapPut("/{id:guid}/unpin", UnpinPost).RequireAuthorization();
     }
 
     private static async Task<IResult> GetAll(IPostRepository repository, int page = 1, int pageSize = 10) => 
@@ -147,5 +149,55 @@ public static class PostEndpoints
         
         logger.LogInformation("Comment added to post: {PostId}", id);
         return Results.Created($"{endpointConfig.Posts.Base}/{id}/comments/{created.Id}", created);
+    }
+
+    private static async Task<IResult> PinPost(
+        Guid id,
+        IPostRepository repository,
+        HttpContext context,
+        ILogger<Program> logger,
+        AuthorizationConfiguration authConfig)
+    {
+        // Require admin role to pin posts
+        if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+        {
+            logger.LogWarning("User {UserName} attempted to pin post without Admin role", context.User.Identity?.Name);
+            return Results.Forbid();
+        }
+
+        var pinned = await repository.SetPinnedAsync(id, true);
+        if (pinned is null)
+        {
+            logger.LogWarning("Pin attempt for non-existent post: {PostId}", id);
+            return Results.NotFound();
+        }
+
+        logger.LogInformation("Post pinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        return Results.Ok(pinned);
+    }
+
+    private static async Task<IResult> UnpinPost(
+        Guid id,
+        IPostRepository repository,
+        HttpContext context,
+        ILogger<Program> logger,
+        AuthorizationConfiguration authConfig)
+    {
+        // Require admin role to unpin posts
+        if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+        {
+            logger.LogWarning("User {UserName} attempted to unpin post without Admin role", context.User.Identity?.Name);
+            return Results.Forbid();
+        }
+
+        var unpinned = await repository.SetPinnedAsync(id, false);
+        if (unpinned is null)
+        {
+            logger.LogWarning("Unpin attempt for non-existent post: {PostId}", id);
+            return Results.NotFound();
+        }
+
+        logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        return Results.Ok(unpinned);
     }
 }

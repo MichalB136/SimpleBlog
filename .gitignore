@@ -3,6 +3,19 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Frontend (Vite + React)
+SimpleBlog.Web/client/node_modules/
+SimpleBlog.Web/client/dist/
+SimpleBlog.Web/wwwroot/dist/
+SimpleBlog.Web/client/.env.local
+SimpleBlog.Web/client/.env.*.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # User-specific files
 *.rsuser
 *.suo

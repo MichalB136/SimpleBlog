@@ -74,6 +74,29 @@ internal static class ApiProxyHelper
         }
     }
 
+    public static async Task<IResult> ProxyPutRequestWithoutBody(
+        IHttpClientFactory factory,
+        string path,
+        HttpContext? context,
+        ILogger logger)
+    {
+        try
+        {
+            var client = factory.CreateClient(ApiConstants.ClientName);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Put, path);
+
+            ForwardAuthorizationHeader(context, httpRequest);
+
+            var response = await client.SendAsync(httpRequest);
+            return await ToResult(response, logger, $"PUT {path}");
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Error putting to API: {Path}", path);
+            return Results.Problem(ApiConstants.ErrorUnableToConnect);
+        }
+    }
+
     public static async Task<IResult> ProxyDeleteRequest(
         IHttpClientFactory factory,
         string path,

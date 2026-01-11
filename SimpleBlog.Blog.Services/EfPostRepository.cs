@@ -19,7 +19,8 @@ public sealed class EfPostRepository(
             {
                 var total = await context.Posts.CountAsync();
                 var entities = await context.Posts
-                    .OrderByDescending(p => p.CreatedAt)
+                    .OrderByDescending(p => p.IsPinned)
+                    .ThenByDescending(p => p.CreatedAt)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
@@ -164,6 +165,24 @@ public sealed class EfPostRepository(
             new { PostId = postId, request.Author });
     }
 
+    public async Task<Post?> SetPinnedAsync(Guid id, bool isPinned)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "SetPinned",
+            "Post",
+            async () =>
+            {
+                var entity = await context.Posts.FirstOrDefaultAsync(p => p.Id == id);
+                if (entity is null)
+                    return null;
+
+                entity.IsPinned = isPinned;
+                await context.SaveChangesAsync();
+                return MapToModel(entity);
+            },
+            new { PostId = id, IsPinned = isPinned });
+    }
+
     /// <summary>
     /// Gets all posts with comments included using specification pattern.
     /// </summary>
@@ -270,7 +289,8 @@ public sealed class EfPostRepository(
             entity.Author,
             entity.CreatedAt,
             orderedComments,
-            entity.ImageUrl
+            entity.ImageUrl,
+            entity.IsPinned
         );
     }
 

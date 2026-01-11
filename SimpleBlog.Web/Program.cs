@@ -31,8 +31,103 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// In development, proxy frontend requests to Vite dev server
+if (app.Environment.IsDevelopment())
+{
+    var viteHttpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5173"),
+        Timeout = TimeSpan.FromSeconds(30)
+    };
+
+    app.Use(async (context, next) =>
+    {
+        // Skip API and health check routes
+        if (context.Request.Path.StartsWithSegments("/api") || 
+            context.Request.Path.StartsWithSegments("/health") ||
+            context.Request.Path.StartsWithSegments("/.well-known"))
+        {
+            await next();
+            return;
+        }
+
+        try
+        {
+            var requestPath = context.Request.Path.Value ?? "/";
+            var requestUrl = $"{requestPath}{context.Request.QueryString}";
+
+            var proxyRequest = new HttpRequestMessage(
+                new HttpMethod(context.Request.Method),
+                requestUrl);
+
+            // Copy headers
+            foreach (var header in context.Request.Headers)
+            {
+                if (!header.Key.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                {
+                    proxyRequest.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
+                }
+            }
+
+            // Copy body if present
+            if (context.Request.ContentLength > 0)
+            {
+                proxyRequest.Content = new StreamContent(context.Request.Body);
+                if (context.Request.ContentType != null)
+                {
+                    proxyRequest.Content.Headers.ContentType = 
+                        new System.Net.Http.Headers.MediaTypeHeaderValue(context.Request.ContentType);
+                }
+            }
+
+            var response = await viteHttpClient.SendAsync(proxyRequest);
+
+            context.Response.StatusCode = (int)response.StatusCode;
+
+            foreach (var header in response.Content.Headers)
+            {
+                context.Response.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            foreach (var header in response.Headers)
+            {
+                context.Response.Headers[header.Key] = header.Value.ToArray();
+            }
+
+            await response.Content.CopyToAsync(context.Response.Body);
+        }
+        catch
+        {
+            // Fallback to next middleware on error
+            await next();
+        }
+    });
+}
+else
+{
+    // Production: Serve static files from dist/
+    var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+    var distPath = Path.Combine(wwwrootPath, "dist");
+
+    // 1) Serve root static files (favicon, etc.)
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath),
+        RequestPath = ""
+    });
+
+    // 2) Serve built assets from /assets mapped to dist/assets
+    var assetsPath = Path.Combine(distPath, "assets");
+    if (Directory.Exists(assetsPath))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(assetsPath),
+            RequestPath = "/assets"
+        });
+    }
+}
 
 var api = app.MapGroup("/api");
 
@@ -73,6 +168,14 @@ api.MapGet("/posts/{id:guid}/comments",
 api.MapPost("/posts/{id:guid}/comments", 
     async (Guid id, CreateCommentRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPostRequest(factory, $"/posts/{id}/comments", request, null, logger));
+
+api.MapPut("/posts/{id:guid}/pin", 
+    async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequestWithoutBody(factory, $"/posts/{id}/pin", context, logger));
+
+api.MapPut("/posts/{id:guid}/unpin", 
+    async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequestWithoutBody(factory, $"/posts/{id}/unpin", context, logger));
 
 // Products
 api.MapGet(EndpointPaths.Products, 
@@ -117,7 +220,12 @@ api.MapPut(EndpointPaths.AboutMe,
     async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
-app.MapFallbackToFile("index.html");
+// SPA fallback to Vite-built index in dist (production only)
+if (!app.Environment.IsDevelopment())
+{
+    app.MapFallbackToFile("dist/index.html");
+}
+
 app.MapHealthChecks("/health");
 app.MapDefaultEndpoints();
 

@@ -8,6 +8,7 @@ public class PostEntity
     public string Author { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
     public string? ImageUrl { get; set; }
+    public bool IsPinned { get; set; }
 
     public List<CommentEntity> Comments { get; set; } = new();
 }
