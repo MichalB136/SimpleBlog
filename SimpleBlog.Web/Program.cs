@@ -41,6 +41,10 @@ api.MapPost(EndpointPaths.Login,
     async (LoginRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Login, request, null, logger));
 
+api.MapPost(EndpointPaths.Register, 
+    async (SimpleBlog.Common.Models.RegisterRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Register, request, null, logger));
+
 // Posts
 api.MapGet(EndpointPaths.Posts, 
     async (IHttpClientFactory factory, ILogger<Program> logger) =>

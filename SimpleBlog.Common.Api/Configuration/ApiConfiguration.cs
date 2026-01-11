@@ -7,6 +7,7 @@ namespace SimpleBlog.Common.Api.Configuration;
 public class EndpointConfiguration
 {
     public string Login { get; set; } = "/login";
+    public string Register { get; set; } = "/register";
     public PostsEndpoints Posts { get; set; } = new();
     public ProductsEndpoints Products { get; set; } = new();
     public OrdersEndpoints Orders { get; set; } = new();

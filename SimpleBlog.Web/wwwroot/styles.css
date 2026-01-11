@@ -473,3 +473,35 @@ small {
   background-color: #1f6feb !important;
   color: #ffffff;
 }
+/* Form improvements for auth pages */
+.card-body form .mb-3 label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.card-body form input[type="text"],
+.card-body form input[type="email"],
+.card-body form input[type="password"] {
+  border-radius: 0.375rem;
+}
+
+.card-body form input:disabled {
+  opacity: 0.6;
+}
+
+.border-top {
+  border-color: var(--border-color) !important;
+}
+
+/* Success and error messages */
+.alert-success {
+  background-color: #d1e7dd;
+  border-color: #badbcc;
+  color: #0f5130;
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: #0f5323;
+  border-color: #238636;
+  color: #aff5b4;
+}
