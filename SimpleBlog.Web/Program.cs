@@ -31,8 +31,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Serve static files from wwwroot/dist (Vite build output)
+var distPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "dist");
+if (Directory.Exists(distPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+            Path.Combine(app.Environment.ContentRootPath, "wwwroot")),
+        RequestPath = ""
+    });
+}
+else
+{
+    // Fallback for development: serve from wwwroot
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
 var api = app.MapGroup("/api");
 
@@ -73,6 +89,14 @@ api.MapGet("/posts/{id:guid}/comments",
 api.MapPost("/posts/{id:guid}/comments", 
     async (Guid id, CreateCommentRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPostRequest(factory, $"/posts/{id}/comments", request, null, logger));
+
+api.MapPut("/posts/{id:guid}/pin", 
+    async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequestWithoutBody(factory, $"/posts/{id}/pin", context, logger));
+
+api.MapPut("/posts/{id:guid}/unpin", 
+    async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequestWithoutBody(factory, $"/posts/{id}/unpin", context, logger));
 
 // Products
 api.MapGet(EndpointPaths.Products, 
@@ -117,7 +141,8 @@ api.MapPut(EndpointPaths.AboutMe,
     async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
-app.MapFallbackToFile("index.html");
+// SPA fallback to Vite-built index in dist
+app.MapFallbackToFile("dist/index.html");
 app.MapHealthChecks("/health");
 app.MapDefaultEndpoints();
 

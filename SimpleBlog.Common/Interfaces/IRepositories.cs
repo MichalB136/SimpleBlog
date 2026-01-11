@@ -11,6 +11,7 @@ public interface IPostRepository
     Task<bool> DeleteAsync(Guid id);
     Task<IReadOnlyList<Comment>?> GetCommentsAsync(Guid postId);
     Task<Comment?> AddCommentAsync(Guid postId, CreateCommentRequest request);
+    Task<Post?> SetPinnedAsync(Guid id, bool isPinned);
 }
 
 public interface IAboutMeRepository
