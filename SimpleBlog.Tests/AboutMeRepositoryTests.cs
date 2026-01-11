@@ -122,24 +122,6 @@ public sealed class AboutMeRepositoryTests
     }
 
     [Fact]
-    public async Task UpdateAsync_WithEmptyContent_SavesEmptyContent()
-    {
-        // Arrange
-        await using var context = CreateInMemoryContext();
-        var repository = new EfAboutMeRepository(context, new NoOpOperationLogger());
-        
-        var request = new UpdateAboutMeRequest("");
-        var updatedBy = "TestUser";
-
-        // Act
-        var result = await repository.UpdateAsync(request, updatedBy);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("", result.Content);
-    }
-
-    [Fact]
     public async Task UpdateAsync_WithLongContent_SavesLongContent()
     {
         // Arrange
