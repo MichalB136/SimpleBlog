@@ -5,6 +5,9 @@ internal static class SeedDataConstants
     public const string AdminUsername = "Admin";
     public const string SystemUsername = "System";
     
+    // Roles
+    public const string AdminRole = "Admin";
+    
     // Product categories
     public const string CategoryClothing = "Odzież";
     public const string CategoryAccessories = "Akcesoria";

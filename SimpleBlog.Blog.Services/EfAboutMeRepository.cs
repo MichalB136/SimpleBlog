@@ -46,6 +46,7 @@ public sealed class EfAboutMeRepository(
                     entity.Content = request.Content;
                     entity.UpdatedAt = DateTimeOffset.UtcNow;
                     entity.UpdatedBy = updatedBy;
+                    context.Update(entity);
                 }
 
                 await context.SaveChangesAsync();

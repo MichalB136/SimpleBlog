@@ -35,7 +35,7 @@ public static class AboutMeEndpoints
         logger.LogInformation("PUT /aboutme called by {UserName}", context.User.Identity?.Name);
         
         // Require admin role to update AboutMe
-        if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
+        if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("User {UserName} attempted to update AboutMe without Admin role", context.User.Identity?.Name);
             return Results.Forbid();
