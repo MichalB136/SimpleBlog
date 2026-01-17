@@ -6,6 +6,7 @@
 # Frontend (Vite + React)
 SimpleBlog.Web/client/node_modules/
 SimpleBlog.Web/client/dist/
+SimpleBlog.Web/client/.vite/
 SimpleBlog.Web/wwwroot/dist/
 SimpleBlog.Web/client/.env.local
 SimpleBlog.Web/client/.env.*.local
