@@ -220,6 +220,27 @@ api.MapPut(EndpointPaths.AboutMe,
     async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
+// Site Settings
+api.MapGet("/site-settings",
+    async (IHttpClientFactory factory, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyGetRequest(factory, "/site-settings", logger));
+
+api.MapPut("/site-settings",
+    async (SimpleBlog.Common.Models.UpdateSiteSettingsRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyPutRequest(factory, "/site-settings", request, context, logger));
+
+api.MapGet("/site-settings/themes",
+    async (IHttpClientFactory factory, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyGetRequest(factory, "/site-settings/themes", logger));
+
+api.MapPost("/site-settings/logo",
+    async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyFormDataRequest(factory, "/site-settings/logo", context, logger));
+
+api.MapDelete("/site-settings/logo",
+    async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyDeleteRequest(factory, "/site-settings/logo", context, logger));
+
 // SPA fallback to Vite-built index in dist (production only)
 if (!app.Environment.IsDevelopment())
 {

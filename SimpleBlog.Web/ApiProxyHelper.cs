@@ -143,6 +143,45 @@ internal static class ApiProxyHelper
         }
     }
 
+    public static async Task<IResult> ProxyFormDataRequest(
+        IHttpClientFactory factory,
+        string path,
+        HttpContext context,
+        ILogger logger)
+    {
+        try
+        {
+            var client = factory.CreateClient(ApiConstants.ClientName);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path);
+
+            // Forward authorization header
+            ForwardAuthorizationHeader(context, httpRequest);
+
+            // Copy the multipart form data from incoming request
+            using var memoryStream = new MemoryStream();
+            await context.Request.Body.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            var content = new StreamContent(memoryStream);
+            
+            // Copy content type header (includes boundary)
+            if (context.Request.ContentType is not null)
+            {
+                content.Headers.TryAddWithoutValidation("Content-Type", context.Request.ContentType);
+            }
+
+            httpRequest.Content = content;
+
+            var response = await client.SendAsync(httpRequest);
+            return await ToResult(response, logger, $"POST {path}");
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Error posting form data to API: {Path}", path);
+            return Results.Problem(ApiConstants.ErrorUnableToConnect);
+        }
+    }
+
     private static void ForwardAuthorizationHeader(HttpContext? context, HttpRequestMessage request)
     {
         if (context is not null && 

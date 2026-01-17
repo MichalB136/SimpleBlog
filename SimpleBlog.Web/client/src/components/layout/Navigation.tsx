@@ -1,21 +1,21 @@
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/hooks/useCart';
 
 interface NavigationProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
   onLogout: () => void;
 }
 
-export function Navigation({ activeTab, onTabChange, onLogout }: NavigationProps) {
+export function Navigation({ onLogout }: NavigationProps) {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
+  const location = useLocation();
 
   const tabs = [
-    { id: 'home', label: 'Home', icon: 'house-door' },
-    { id: 'about', label: 'O mnie', icon: 'person' },
-    { id: 'shop', label: 'Sklep', icon: 'shop' },
-    { id: 'contact', label: 'Kontakt', icon: 'envelope' },
+    { id: 'home', label: 'Home', icon: 'house-door', path: '/' },
+    { id: 'about', label: 'O mnie', icon: 'person', path: '/about' },
+    { id: 'shop', label: 'Sklep', icon: 'shop', path: '/shop' },
+    { id: 'contact', label: 'Kontakt', icon: 'envelope', path: '/contact' },
   ];
 
   return (
@@ -35,6 +35,15 @@ export function Navigation({ activeTab, onTabChange, onLogout }: NavigationProps
               </span>
             </div>
           )}
+          {user?.role === 'Admin' && (
+            <Link
+              to="/settings"
+              className="btn btn-outline-secondary btn-sm"
+              title="Panel administracyjny"
+            >
+              <i className="bi bi-gear-fill"></i>
+            </Link>
+          )}
           <button
             className="btn btn-outline-secondary btn-sm"
             onClick={() => {
@@ -50,9 +59,9 @@ export function Navigation({ activeTab, onTabChange, onLogout }: NavigationProps
       <ul className="nav nav-tabs mb-4">
         {tabs.map((tab) => (
           <li key={tab.id} className="nav-item position-relative">
-            <button
-              className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => onTabChange(tab.id)}
+            <Link
+              to={tab.path}
+              className={`nav-link ${location.pathname === tab.path ? 'active' : ''}`}
             >
               <i className={`bi bi-${tab.icon} me-2`}></i>
               {tab.label}
@@ -61,7 +70,7 @@ export function Navigation({ activeTab, onTabChange, onLogout }: NavigationProps
                   {itemCount}
                 </span>
               )}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>

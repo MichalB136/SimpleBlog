@@ -22,6 +22,9 @@ public static class PostEndpoints
         posts.MapPost(endpointConfig.Posts.AddComment, AddComment);
         posts.MapPut("/{id:guid}/pin", PinPost).RequireAuthorization();
         posts.MapPut("/{id:guid}/unpin", UnpinPost).RequireAuthorization();
+        posts.MapPost("/image", UploadPostImage)
+            .RequireAuthorization()
+            .DisableAntiforgery();
     }
 
     private static async Task<IResult> GetAll(IPostRepository repository, int page = 1, int pageSize = 10) => 
@@ -199,5 +202,42 @@ public static class PostEndpoints
 
         logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
         return Results.Ok(unpinned);
+    }
+
+    private static async Task<IResult> UploadPostImage(
+        IFormFile file,
+        IImageStorageService imageStorage,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        logger.LogInformation("POST /posts/image called by {UserName}", context.User.Identity?.Name);
+
+        // Validate file
+        if (file.Length == 0)
+            return Results.BadRequest(new { error = "File is empty" });
+
+        if (file.Length > 10 * 1024 * 1024) // 10 MB limit for post images
+            return Results.BadRequest(new { error = "File size cannot exceed 10 MB" });
+
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType.ToLowerInvariant()))
+            return Results.BadRequest(new { error = "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "posts", ct);
+
+            logger.LogInformation("Post image uploaded successfully by {UserName}: {ImageUrl}", 
+                context.User.Identity?.Name, imageUrl);
+            
+            return Results.Ok(new { url = imageUrl });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error uploading post image");
+            return Results.Problem("Failed to upload image");
+        }
     }
 }

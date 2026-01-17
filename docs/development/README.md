@@ -13,6 +13,8 @@
 - **[project-structure.md](./project-structure.md)** - Project structure and code organization
 - **[database-guide.md](./database-guide.md)** - PostgreSQL setup, migrations, and troubleshooting
 - **[git-workflow.md](./git-workflow.md)** - GitFlow strategy, branching, and commit conventions
+- **[react-router-guide.md](./react-router-guide.md)** - React Router implementation and SPA routing
+- **[admin-features.md](./admin-features.md)** - Admin panel features (themes, logo management)
 
 ### 🚧 Planned Documentation
 

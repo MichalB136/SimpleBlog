@@ -56,7 +56,11 @@ public static class JwtExtensions
             };
         });
 
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy =>
+                policy.RequireRole("Admin"));
+        });
 
         return (jwtIssuer, jwtAudience, key);
     }

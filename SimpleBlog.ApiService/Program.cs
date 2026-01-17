@@ -1,14 +1,17 @@
 using System.Text;
+using CloudinaryDotNet;
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.ApiService;
 using SimpleBlog.ApiService.Configuration;
 using SimpleBlog.ApiService.Data;
 using SimpleBlog.ApiService.Endpoints;
 using SimpleBlog.ApiService.Identity;
+using SimpleBlog.ApiService.Services;
 using SimpleBlog.Blog.Services;
 using SimpleBlog.Shop.Services;
 using SimpleBlog.Email.Services;
 using SimpleBlog.Common;
+using SimpleBlog.Common.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +61,45 @@ builder.ConfigureDatabase(connectionString);
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IUserRepository, IdentityUserRepository>();
 
+// Configure Cloudinary (optional - for image uploads)
+// Supports CLOUDINARY_URL or individual settings (CloudName, ApiKey, ApiSecret)
+var cloudinaryUrl = Environment.GetEnvironmentVariable("CLOUDINARY_URL");
+Cloudinary? cloudinary = null;
+var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+
+if (!string.IsNullOrEmpty(cloudinaryUrl))
+{
+    // Use CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
+    cloudinary = new Cloudinary(cloudinaryUrl);
+    cloudinary.Api.Secure = true; // Use HTTPS URLs
+    builder.Services.AddSingleton(cloudinary);
+    builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
+    logger.LogInformation("Cloudinary configured from CLOUDINARY_URL");
+}
+else
+{
+    // Fallback to individual settings
+    var cloudName = builder.Configuration["Cloudinary:CloudName"];
+    var apiKey = builder.Configuration["Cloudinary:ApiKey"];
+    var apiSecret = builder.Configuration["Cloudinary:ApiSecret"];
+
+    if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
+    {
+        var account = new Account(cloudName, apiKey, apiSecret);
+        cloudinary = new Cloudinary(account);
+        cloudinary.Api.Secure = true; // Use HTTPS URLs
+        builder.Services.AddSingleton(cloudinary);
+        builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
+        logger.LogInformation("Cloudinary configured with CloudName: {CloudName}", cloudName);
+    }
+    else
+    {
+        logger.LogWarning("Cloudinary not configured. Image upload features will not be available. " +
+            "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +
+            "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret");
+    }
+}
+
 var app = builder.Build();
 
 // Apply database migrations automatically
@@ -97,6 +139,7 @@ app.MapPostEndpoints();
 app.MapAboutMeEndpoints();
 app.MapProductEndpoints();
 app.MapOrderEndpoints();
+app.MapSiteSettingsEndpoints();
 
 app.MapDefaultEndpoints();
 
