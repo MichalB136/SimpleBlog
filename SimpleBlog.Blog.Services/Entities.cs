@@ -31,3 +31,12 @@ public class AboutMeEntity
     public DateTimeOffset UpdatedAt { get; set; }
     public string UpdatedBy { get; set; } = null!;
 }
+
+public class SiteSettingsEntity
+{
+    public Guid Id { get; set; }
+    public string Theme { get; set; } = null!;
+    public string? LogoUrl { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string UpdatedBy { get; set; } = null!;
+}

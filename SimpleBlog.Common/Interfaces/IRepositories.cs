@@ -41,3 +41,10 @@ public interface IUserRepository
     Task<User?> ValidateUserAsync(string username, string password);
     Task<(bool Success, string? ErrorMessage)> RegisterAsync(string username, string email, string password);
 }
+
+public interface ISiteSettingsRepository
+{
+    Task<SiteSettings?> GetAsync(CancellationToken ct = default);
+    Task<SiteSettings> UpdateAsync(string theme, string updatedBy, CancellationToken ct = default);
+    Task<SiteSettings> UpdateLogoAsync(string? logoUrl, string updatedBy, CancellationToken ct = default);
+}

@@ -13,6 +13,12 @@
 - [data-flow.md](./data-flow.md) - Data flow in the system
 - [aspire-architecture.md](./aspire-architecture.md) - .NET Aspire architecture
 
+### Observability and Monitoring
+- [logging-observability.md](./logging-observability.md) - Structured logging and OpenTelemetry
+
+### External Services
+- [cloudinary-integration.md](./cloudinary-integration.md) - Cloudinary image storage integration
+
 ### Technologies and Stack
 - [technology-stack.md](./technology-stack.md) - Complete technology stack
 - [dependencies.md](./dependencies.md) - Dependencies and library versions

@@ -59,6 +59,7 @@ public static class DatabaseExtensions
         builder.Services.AddScoped<IAboutMeRepository, EfAboutMeRepository>();
         builder.Services.AddScoped<IProductRepository, EfProductRepository>();
         builder.Services.AddScoped<IOrderRepository, EfOrderRepository>();
+        builder.Services.AddScoped<ISiteSettingsRepository, EfSiteSettingsRepository>();
     }
 
     public static async Task MigrateDatabaseAsync(WebApplication app)

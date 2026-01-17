@@ -11,6 +11,7 @@ public class BlogDbContext : DbContext
     public DbSet<PostEntity> Posts { get; set; } = null!;
     public DbSet<CommentEntity> Comments { get; set; } = null!;
     public DbSet<AboutMeEntity> AboutMe { get; set; } = null!;
+    public DbSet<SiteSettingsEntity> SiteSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,14 @@ public class BlogDbContext : DbContext
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.UpdatedAt).IsRequired();
             entity.Property(e => e.UpdatedBy).IsRequired();
+        });
+
+        modelBuilder.Entity<SiteSettingsEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Theme).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.Property(e => e.UpdatedBy).IsRequired().HasMaxLength(100);
         });
     }
 }
