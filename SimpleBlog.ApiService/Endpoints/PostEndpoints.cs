@@ -73,8 +73,7 @@ public static class PostEndpoints
         IValidator<UpdatePostRequest> validator,
         IPostRepository repository,
         IOperationLogger operationLogger,
-        ILogger<Program> logger,
-        EndpointConfiguration endpointConfig)
+        ILogger<Program> logger)
     {
         // Validate request using FluentValidation
         var validationResult = await validator.ValidateAsync(request);
@@ -158,8 +157,7 @@ public static class PostEndpoints
         Guid id,
         IPostRepository repository,
         HttpContext context,
-        ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        ILogger<Program> logger)
     {
         // Require admin role to pin posts
         if (!context.User.IsInRole(SeedDataConstants.AdminUsername))
@@ -183,8 +181,7 @@ public static class PostEndpoints
         Guid id,
         IPostRepository repository,
         HttpContext context,
-        ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        ILogger<Program> logger)
     {
         // Require admin role to unpin posts
         if (!context.User.IsInRole(SeedDataConstants.AdminUsername))

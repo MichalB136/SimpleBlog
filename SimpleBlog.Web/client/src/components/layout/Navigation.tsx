@@ -3,10 +3,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/hooks/useCart';
 
 interface NavigationProps {
-  onLogout: () => void;
+  readonly onLogout: () => void;
 }
 
-export function Navigation({ onLogout }: NavigationProps) {
+export function Navigation({ onLogout }: Readonly<NavigationProps>) {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const location = useLocation();

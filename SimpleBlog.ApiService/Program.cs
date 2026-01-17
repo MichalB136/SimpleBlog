@@ -65,7 +65,8 @@ builder.Services.AddScoped<IUserRepository, IdentityUserRepository>();
 // Supports CLOUDINARY_URL or individual settings (CloudName, ApiKey, ApiSecret)
 var cloudinaryUrl = Environment.GetEnvironmentVariable("CLOUDINARY_URL");
 Cloudinary? cloudinary = null;
-var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+string? cloudinaryLogMessage = null;
+bool cloudinaryConfigured = false;
 
 if (!string.IsNullOrEmpty(cloudinaryUrl))
 {
@@ -74,7 +75,8 @@ if (!string.IsNullOrEmpty(cloudinaryUrl))
     cloudinary.Api.Secure = true; // Use HTTPS URLs
     builder.Services.AddSingleton(cloudinary);
     builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
-    logger.LogInformation("Cloudinary configured from CLOUDINARY_URL");
+    cloudinaryLogMessage = "Cloudinary configured from CLOUDINARY_URL";
+    cloudinaryConfigured = true;
 }
 else
 {
@@ -90,17 +92,32 @@ else
         cloudinary.Api.Secure = true; // Use HTTPS URLs
         builder.Services.AddSingleton(cloudinary);
         builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
-        logger.LogInformation("Cloudinary configured with CloudName: {CloudName}", cloudName);
+        cloudinaryLogMessage = $"Cloudinary configured with CloudName: {cloudName}";
+        cloudinaryConfigured = true;
     }
     else
     {
-        logger.LogWarning("Cloudinary not configured. Image upload features will not be available. " +
+        cloudinaryLogMessage = "Cloudinary not configured. Image upload features will not be available. " +
             "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +
-            "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret");
+            "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret";
     }
 }
 
 var app = builder.Build();
+
+// Log Cloudinary configuration status after app is built
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+if (cloudinaryLogMessage is not null)
+{
+    if (cloudinaryConfigured)
+    {
+        logger.LogInformation("{Message}", cloudinaryLogMessage);
+    }
+    else
+    {
+        logger.LogWarning("{Message}", cloudinaryLogMessage);
+    }
+}
 
 // Apply database migrations automatically
 await DatabaseExtensions.MigrateDatabaseAsync(app);

@@ -1,11 +1,11 @@
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 
 interface HeaderProps {
-  title: string;
-  subtitle: string;
+  readonly title: string;
+  readonly subtitle: string;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle }: Readonly<HeaderProps>) {
   const { settings } = useSiteSettings();
 
   return (

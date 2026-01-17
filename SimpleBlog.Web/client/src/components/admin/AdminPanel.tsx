@@ -15,11 +15,11 @@ export function AdminPanel() {
     setSelectedTheme(settings.theme);
   }
 
-  if (!user || user.role !== 'Admin') {
+  if (user?.role !== 'Admin') {
     return (
       <div className="container mt-5">
         <div className="alert alert-danger">
-          <i className="bi bi-exclamation-triangle me-2"></i>
+          <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{' '}
           Dostęp tylko dla administratorów
         </div>
       </div>
@@ -129,7 +129,7 @@ export function AdminPanel() {
   return (
     <div className="container mt-4">
       <h2 className="mb-4">
-        <i className="bi bi-gear me-2"></i>
+        <i className="bi bi-gear me-2" aria-hidden="true"></i>{' '}
         Panel Administratora
       </h2>
 
@@ -149,21 +149,21 @@ export function AdminPanel() {
       <div className="card mb-4">
         <div className="card-header">
           <h5 className="mb-0">
-            <i className="bi bi-image me-2"></i>
+            <i className="bi bi-image me-2" aria-hidden="true"></i>{' '}
             Zarządzanie logo
           </h5>
         </div>
         <div className="card-body">
           {loading ? (
-            <div className="text-center py-4">
-              <div className="spinner-border" role="status">
+            <div className="text-center py-4" aria-live="polite">
+              <div className="spinner-border" aria-hidden="true">
                 <span className="visually-hidden">Ładowanie...</span>
               </div>
             </div>
           ) : (
             <>
               <div className="mb-3">
-                <label className="form-label fw-bold">Aktualne logo:</label>
+                <div className="form-label fw-bold">Aktualne logo:</div>
                 {settings?.logoUrl ? (
                   <div className="d-flex align-items-center gap-3">
                     <img
@@ -177,7 +177,7 @@ export function AdminPanel() {
                       onClick={handleLogoDelete}
                       disabled={uploading}
                     >
-                      <i className="bi bi-trash me-2"></i>
+                      <i className="bi bi-trash me-2" aria-hidden="true"></i>{' '}
                       Usuń logo
                     </button>
                   </div>
@@ -204,10 +204,10 @@ export function AdminPanel() {
               </div>
 
               {uploading && (
-                <div className="alert alert-info">
-                  <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                <output className="alert alert-info d-block" aria-live="polite">
+                  <div className="spinner-border spinner-border-sm me-2" aria-hidden="true"></div>
                   Przesyłanie logo...
-                </div>
+                </output>
               )}
             </>
           )}
@@ -217,21 +217,21 @@ export function AdminPanel() {
       <div className="card">
         <div className="card-header">
           <h5 className="mb-0">
-            <i className="bi bi-palette me-2"></i>
+            <i className="bi bi-palette me-2" aria-hidden="true"></i>{' '}
             Zarządzanie motywami
           </h5>
         </div>
         <div className="card-body">
           {loading ? (
-            <div className="text-center py-4">
-              <div className="spinner-border" role="status">
+            <div className="text-center py-4" aria-live="polite">
+              <div className="spinner-border" aria-hidden="true">
                 <span className="visually-hidden">Ładowanie...</span>
               </div>
             </div>
           ) : (
             <>
               <div className="mb-3">
-                <label className="form-label fw-bold">Aktualny motyw:</label>
+                <div className="form-label fw-bold">Aktualny motyw:</div>
                 <p className="text-muted">
                   {settings ? getThemeDisplayName(settings.theme) : 'Nie ustawiono'}
                   {settings && (
@@ -265,22 +265,24 @@ export function AdminPanel() {
               <div className="row g-3 mb-4">
                 {availableThemes.map((theme) => (
                   <div key={theme} className="col-md-4">
-                    <div
-                      className={`card h-100 cursor-pointer ${selectedTheme === theme ? 'border-primary' : ''}`}
+                    <button
+                      type="button"
+                      className={`card h-100 w-100 cursor-pointer border ${selectedTheme === theme ? 'border-primary' : ''}`}
                       onClick={() => setSelectedTheme(theme)}
-                      style={{ cursor: 'pointer' }}
+                      aria-pressed={selectedTheme === theme}
+                      style={{ cursor: 'pointer', background: 'transparent' }}
                     >
                       <div className="card-body text-center">
-                        <i className={`bi bi-${getThemeIcon(theme)} fs-1 mb-2`}></i>
+                        <i className={`bi bi-${getThemeIcon(theme)} fs-1 mb-2`} aria-hidden="true"></i>
                         <h6 className="card-title">{getThemeDisplayName(theme)}</h6>
                         {selectedTheme === theme && (
                           <span className="badge bg-primary mt-2">
-                            <i className="bi bi-check-circle me-1"></i>
+                            <i className="bi bi-check-circle me-1" aria-hidden="true"></i>{' '}
                             Wybrany
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -293,12 +295,12 @@ export function AdminPanel() {
                 >
                   {updating ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      <span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>{' '}
                       Aktualizowanie...
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-save me-2"></i>
+                      <i className="bi bi-save me-2" aria-hidden="true"></i>{' '}
                       Zapisz motyw
                     </>
                   )}
@@ -309,7 +311,7 @@ export function AdminPanel() {
                     onClick={() => setSelectedTheme(settings?.theme || '')}
                     disabled={updating}
                   >
-                    <i className="bi bi-x-circle me-2"></i>
+                    <i className="bi bi-x-circle me-2" aria-hidden="true"></i>{' '}
                     Anuluj
                   </button>
                 )}
@@ -322,7 +324,7 @@ export function AdminPanel() {
       <div className="card mt-4">
         <div className="card-header">
           <h5 className="mb-0">
-            <i className="bi bi-info-circle me-2"></i>
+            <i className="bi bi-info-circle me-2" aria-hidden="true"></i>{' '}
             Informacje
           </h5>
         </div>

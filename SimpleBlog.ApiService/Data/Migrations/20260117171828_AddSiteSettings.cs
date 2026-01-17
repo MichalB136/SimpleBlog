@@ -16,7 +16,9 @@ namespace SimpleBlog.ApiService.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            // This migration was superseded by a subsequent migration that includes all changes.
+            // Rolling back is not supported as it would require complex data migration logic.
+            throw new NotSupportedException("This migration cannot be reversed. Please use a fresh database or restore from backup.");
         }
     }
 }

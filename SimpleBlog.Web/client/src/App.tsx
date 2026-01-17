@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Navigation } from '@/components/layout/Navigation';
 import { usePosts } from '@/hooks/usePosts';
@@ -11,7 +11,6 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 function AppContent() {
   const { user } = useAuth();
@@ -20,6 +19,26 @@ function AppContent() {
 
   const handleLogout = () => {
     navigate('/');
+  };
+
+  const renderHomePage = () => {
+    if (loading) {
+      return <p className="text-muted">Ładowanie postów...</p>;
+    }
+    
+    if (error) {
+      return <div className="alert alert-danger">{error}</div>;
+    }
+    
+    return (
+      <PostList
+        posts={posts}
+        isAdmin={user?.role === 'Admin'}
+        onDelete={deletePost}
+        onAddComment={addComment}
+        onTogglePin={togglePin}
+      />
+    );
   };
 
   if (!user) {
@@ -88,21 +107,7 @@ function AppContent() {
         <Navigation onLogout={handleLogout} />
         <div className="flex-grow-1">
           <Routes>
-            <Route path="/" element={
-              loading ? (
-                <p className="text-muted">Ładowanie postów...</p>
-              ) : error ? (
-                <div className="alert alert-danger">{error}</div>
-              ) : (
-                <PostList
-                  posts={posts}
-                  isAdmin={user?.role === 'Admin'}
-                  onDelete={deletePost}
-                  onAddComment={addComment}
-                  onTogglePin={togglePin}
-                />
-              )
-            } />
+            <Route path="/" element={renderHomePage()} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/shop" element={<ShopPage onViewCart={() => navigate('/cart')} />} />
             <Route path="/cart" element={<CartPage />} />
@@ -112,14 +117,14 @@ function AppContent() {
                 <div className="container-fluid">
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <h2>
-                      <i className="bi bi-gear-fill me-2"></i>
+                      <i className="bi bi-gear-fill me-2" aria-hidden="true"></i>{' '}
                       Panel Administracyjny
                     </h2>
                     <button
                       className="btn btn-outline-secondary"
                       onClick={() => navigate('/')}
                     >
-                      <i className="bi bi-arrow-left me-2"></i>
+                      <i className="bi bi-arrow-left me-2" aria-hidden="true"></i>{' '}
                       Powrót
                     </button>
                   </div>
