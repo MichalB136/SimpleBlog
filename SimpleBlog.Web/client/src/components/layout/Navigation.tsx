@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/hooks/useCart';
 
 interface NavigationProps {
-  readonly onLogout: () => void;
+  onLogout: () => void;
 }
 
 export function Navigation({ onLogout }: Readonly<NavigationProps>) {
