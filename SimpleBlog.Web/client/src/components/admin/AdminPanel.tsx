@@ -82,7 +82,7 @@ export function AdminPanel() {
   };
 
   const handleLogoDelete = async () => {
-    if (!confirm('Czy na pewno chcesz usunąć logo?')) return;
+    if (!window.confirm('Czy na pewno chcesz usunąć logo?')) return;
 
     setUploading(true);
     setMessage(null);

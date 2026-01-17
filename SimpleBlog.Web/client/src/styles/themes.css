@@ -127,9 +127,9 @@ html.theme-sunset {
 
 html.theme-sunset .nav-tabs .nav-link.active {
   background-color: #fff5e6;
-  border-color: #cc5529 #cc5529 #fff5e6;
-  color: #cc5529;
-  box-shadow: 0 -2px 0 0 #cc5529 inset;
+  border-color: #b34420 #b34420 #fff5e6;
+  color: #b34420;
+  box-shadow: 0 -2px 0 0 #b34420 inset;
 }
 
 html.theme-sunset .alert {

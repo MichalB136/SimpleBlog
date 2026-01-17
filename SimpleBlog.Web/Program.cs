@@ -221,25 +221,25 @@ api.MapPut(EndpointPaths.AboutMe,
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
 // Site Settings
-api.MapGet("/site-settings",
+api.MapGet(SiteSettingsPath,
     async (IHttpClientFactory factory, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyGetRequest(factory, "/site-settings", logger));
+        await ApiProxyHelper.ProxyGetRequest(factory, SiteSettingsPath, logger));
 
-api.MapPut("/site-settings",
+api.MapPut(SiteSettingsPath,
     async (SimpleBlog.Common.Models.UpdateSiteSettingsRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyPutRequest(factory, "/site-settings", request, context, logger));
+        await ApiProxyHelper.ProxyPutRequest(factory, SiteSettingsPath, request, context, logger));
 
-api.MapGet("/site-settings/themes",
+api.MapGet($"{SiteSettingsPath}/themes",
     async (IHttpClientFactory factory, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyGetRequest(factory, "/site-settings/themes", logger));
+        await ApiProxyHelper.ProxyGetRequest(factory, $"{SiteSettingsPath}/themes", logger));
 
-api.MapPost("/site-settings/logo",
+api.MapPost(SiteSettingsLogoPath,
     async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyFormDataRequest(factory, "/site-settings/logo", context, logger));
+        await ApiProxyHelper.ProxyFormDataRequest(factory, SiteSettingsLogoPath, context, logger));
 
-api.MapDelete("/site-settings/logo",
+api.MapDelete(SiteSettingsLogoPath,
     async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyDeleteRequest(factory, "/site-settings/logo", context, logger));
+        await ApiProxyHelper.ProxyDeleteRequest(factory, SiteSettingsLogoPath, context, logger));
 
 // SPA fallback to Vite-built index in dist (production only)
 if (!app.Environment.IsDevelopment())
