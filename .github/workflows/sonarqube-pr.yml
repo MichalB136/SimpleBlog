@@ -42,19 +42,26 @@ jobs:
             /n:"SimpleBlog" \
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
-            /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
+            /d:sonar.cs.vstest.reportsPaths=**/TestResults/*.trx \
             /d:sonar.cs.opencover.reportsPaths=coverage.opencover.xml \
             /d:sonar.verbose=true
 
           dotnet restore SimpleBlog.sln
           dotnet build SimpleBlog.sln --no-restore --no-incremental
 
-          # collect coverage in OpenCover format using coverlet via MSBuild properties
-          dotnet test SimpleBlog.sln --no-build -v minimal /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=coverage.opencover.xml
+          # install coverlet.console and collect coverage with it (more reliable on CI)
+          dotnet tool install --global coverlet.console || true
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          coverlet "SimpleBlog.Tests/bin/Debug/net9.0/SimpleBlog.Tests.dll" --target "dotnet" --targetargs "test SimpleBlog.Tests --no-build -v minimal" --format opencover --output coverage.opencover.xml
 
-          # validate the generated coverage file is XML and contains <coverage
-          if ! grep -m1 -F "<coverage" coverage.opencover.xml >/dev/null 2>&1; then
-            echo "ERROR: coverage.opencover.xml missing or not valid XML (no <coverage tag)." >&2
+          # validate the generated coverage file exists and is XML (contains <coverage)
+          if [ ! -f coverage.opencover.xml ]; then
+            echo "ERROR: coverage.opencover.xml not created" >&2
+            exit 1
+          fi
+
+          if ! grep -m1 -E "<(coverage|CoverageSession)" coverage.opencover.xml >/dev/null 2>&1; then
+            echo "ERROR: coverage.opencover.xml missing expected XML root tag (<CoverageSession> or <coverage>)." >&2
             echo "First 200 bytes:" && head -c 200 coverage.opencover.xml | xxd -g 1 -l 200 || true
             exit 1
           fi
