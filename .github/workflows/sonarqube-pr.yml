@@ -44,7 +44,7 @@ jobs:
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
 
           dotnet build SimpleBlog.sln --no-restore
           dotnet restore SimpleBlog.sln
