@@ -28,4 +28,11 @@ internal static class EndpointPaths
     // Orders
     public const string Orders = "/orders";
     public const string OrdersById = "/orders/{0}";
+    
+    // Site Settings
+    public const string SiteSettings = "/site-settings";
+    public const string SiteSettingsLogo = "/site-settings/logo";
+
+    // Tags
+    public const string Tags = "/tags";
 }

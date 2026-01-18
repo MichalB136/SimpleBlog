@@ -9,10 +9,16 @@ async function apiRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   const token = localStorage.getItem('authToken');
+  
+  // Don't set Content-Type for FormData - browser will set it automatically with boundary
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...options.headers,
   };
+  
+  // Only set Content-Type for JSON if body is not FormData
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -40,12 +46,12 @@ export const apiClient = {
   post: <T,>(path: string, body?: unknown) =>
     apiRequest<T>(path, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
     }),
   put: <T,>(path: string, body?: unknown) =>
     apiRequest<T>(path, {
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
     }),
   delete: <T,>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
 };

@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { Navigation } from '@/components/layout/Navigation';
 import { usePosts } from '@/hooks/usePosts';
 import { PostList } from '@/components/posts/PostList';
+import { PostForm } from '@/components/posts/PostForm';
 import { AboutPage } from '@/components/common/AboutPage';
 import { ShopPage } from '@/components/shop/ShopPage';
 import { CartPage } from '@/components/shop/CartPage';
@@ -11,14 +12,53 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
+import type { Post } from '@/types/post';
 
 function AppContent() {
   const { user } = useAuth();
-  const { posts, loading, error, delete: deletePost, addComment, togglePin } = usePosts();
+  const { posts, loading, error, delete: deletePost, addComment, togglePin, create, update, addImage, removeImage } = usePosts();
   const navigate = useNavigate();
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
 
   const handleLogout = () => {
     navigate('/');
+  };
+
+  const handlePostSubmit = async (
+    data: { title: string; content: string; author: string },
+    files?: File[],
+    tagIds?: string[]
+  ) => {
+    if (editingPost) {
+      await update(editingPost.id, data, tagIds);
+    } else {
+      await create(data, files, tagIds);
+    }
+    setShowPostForm(false);
+    setEditingPost(null);
+  };
+
+  const handlePostCancel = () => {
+    setShowPostForm(false);
+    setEditingPost(null);
+  };
+
+  const handleAddImage = async (postId: string, file: File) => {
+    const updated = await addImage(postId, file);
+    // Update editing post to reflect new images
+    if (editingPost && editingPost.id === postId) {
+      setEditingPost(updated);
+    }
+  };
+
+  const handleRemoveImage = async (postId: string, imageUrl: string) => {
+    const updated = await removeImage(postId, imageUrl);
+    // Update editing post to reflect removed image
+    if (editingPost && editingPost.id === postId) {
+      setEditingPost(updated);
+    }
   };
 
   const renderHomePage = () => {
@@ -31,20 +71,40 @@ function AppContent() {
     }
     
     return (
-      <PostList
-        posts={posts}
-        isAdmin={user?.role === 'Admin'}
-        onDelete={deletePost}
-        onAddComment={addComment}
-        onTogglePin={togglePin}
-      />
+      <>
+        {user?.role === 'Admin' && (
+          <div className="mb-4">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingPost(null);
+                setShowPostForm(true);
+              }}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Dodaj nowy post
+            </button>
+          </div>
+        )}
+        <PostList
+          posts={posts}
+          isAdmin={user?.role === 'Admin'}
+          onDelete={deletePost}
+          onEdit={(post) => {
+            setEditingPost(post);
+            setShowPostForm(true);
+          }}
+          onAddComment={addComment}
+          onTogglePin={togglePin}
+        />
+      </>
     );
   };
 
   if (!user) {
     return (
       <div className="min-vh-100 d-flex flex-column">
-        <Header title="SimpleBlog × Aspire" subtitle="Prosty blog i sklep" />
+        <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
         <div className="container my-4">
           <Routes>
             <Route path="/register" element={
@@ -92,7 +152,7 @@ function AppContent() {
         <footer className="bg-light py-4 mt-5 border-top">
           <div className="container text-center text-muted">
             <p className="mb-0">
-              SimpleBlog × Aspire &copy; 2024 | Powered by ASP.NET 9 & Vite React
+              SimpleBlog - Ręcznie Robione Ubrania &copy; 2024
             </p>
           </div>
         </footer>
@@ -102,7 +162,7 @@ function AppContent() {
 
   return (
     <div className="min-vh-100 d-flex flex-column">
-      <Header title="SimpleBlog × Aspire" subtitle="Prosty blog i sklep" />
+      <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
       <div className="container-fluid flex-grow-1 d-flex flex-column">
         <Navigation onLogout={handleLogout} />
         <div className="flex-grow-1">
@@ -138,10 +198,19 @@ function AppContent() {
           </Routes>
         </div>
       </div>
+      {showPostForm && (
+        <PostForm
+          post={editingPost}
+          onSubmit={handlePostSubmit}
+          onCancel={handlePostCancel}
+          onAddImage={editingPost ? handleAddImage : undefined}
+          onRemoveImage={editingPost ? handleRemoveImage : undefined}
+        />
+      )}
       <footer className="bg-light py-4 mt-5 border-top">
         <div className="container text-center text-muted">
           <p className="mb-0">
-            SimpleBlog × Aspire &copy; 2024 | Powered by ASP.NET 9 & Vite React
+                  SimpleBlog - Ręcznie Robione Ubrania &copy; 2024
           </p>
         </div>
       </footer>

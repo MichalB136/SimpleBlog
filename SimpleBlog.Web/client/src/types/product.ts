@@ -7,6 +7,15 @@ export interface Product {
   imageUrl?: string;
   category?: string;
   createdAt?: string;
+  tags?: Tag[];
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+  color?: string;
+  createdAt: string;
 }
 
 export interface PaginatedResponse<T> {

@@ -1,0 +1,82 @@
+name: SonarQube PR Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonar_analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+          # Disable built-in NuGet caching because it requires committed packages.lock.json
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool update --global dotnet-sonarscanner
+
+      - name: Add .NET tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: SonarQube Begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # Sanitize PR metadata to avoid using user-controlled data directly in commands
+          PR_KEY=$(printf '%s' "$PR_NUMBER" | tr -cd '0-9')
+          PR_BRANCH_SAFE=$(printf '%s' "$PR_HEAD_REF" | tr -cd '[:alnum:]._/-')
+          PR_BASE_SAFE=$(printf '%s' "$PR_BASE_REF" | tr -cd '[:alnum:]._/-')
+
+          dotnet sonarscanner begin \
+            /k:"MichalB136_SimpleBlog" \
+            /n:"SimpleBlog" \
+            /o:"michalb136-1" \
+            /d:sonar.login="$SONAR_TOKEN" \
+            /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.pullrequest.key="$PR_KEY" \
+            /d:sonar.pullrequest.branch="$PR_BRANCH_SAFE" \
+            /d:sonar.pullrequest.base="$PR_BASE_SAFE"
+
+      - name: Restore
+        run: dotnet restore SimpleBlog.sln
+
+      - name: Build
+        run: dotnet build SimpleBlog.sln --no-restore
+
+      - name: Test with coverage
+        run: |
+          dotnet test SimpleBlog.Tests/SimpleBlog.Tests.csproj \
+            --no-build \
+            --logger "trx;LogFileName=test_results.trx" \
+            /p:CollectCoverage=true \
+            /p:CoverletOutput=TestResults/coverage.opencover.xml \
+            /p:CoverletOutputFormat=opencover
+
+      - name: SonarQube End
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+        
+      - name: Quality Gate (optional)
+        if: always()
+        uses: sonarsource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}

@@ -12,15 +12,13 @@ public record RegisterResponse(bool Success, string? Message);
 public record CreatePostRequest(
     string Title,
     string Content,
-    string? Author,
-    string? ImageUrl
+    string? Author
 );
 
 public record UpdatePostRequest(
     string? Title,
     string? Content,
-    string? Author,
-    string? ImageUrl
+    string? Author
 );
 
 public record CreateCommentRequest(
@@ -31,6 +29,21 @@ public record CreateCommentRequest(
 // AboutMe DTOs
 public record UpdateAboutMeRequest(
     string Content
+);
+
+// Tag DTOs
+public record CreateTagRequest(
+    string Name,
+    string? Color
+);
+
+public record UpdateTagRequest(
+    string? Name,
+    string? Color
+);
+
+public record AssignTagsRequest(
+    List<Guid> TagIds
 );
 
 // Product DTOs

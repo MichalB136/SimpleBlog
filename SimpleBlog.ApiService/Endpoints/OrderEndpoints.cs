@@ -2,6 +2,7 @@ using FluentValidation;
 using SimpleBlog.ApiService;
 using SimpleBlog.Common;
 using SimpleBlog.Common.Logging;
+using static SimpleBlog.ApiService.SeedDataConstants;
 
 namespace SimpleBlog.ApiService.Endpoints;
 
@@ -26,7 +27,7 @@ public static class OrderEndpoints
         int page = 1,
         int pageSize = 10)
     {
-        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole("Admin"))
+        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole(AdminRole))
         {
             logger.LogWarning("Unauthorized attempt to view all orders");
             return Results.Forbid();
@@ -42,7 +43,7 @@ public static class OrderEndpoints
         ILogger<Program> logger,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole("Admin"))
+        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole(AdminRole))
         {
             logger.LogWarning("Unauthorized attempt to view order: {OrderId}", id);
             return Results.Forbid();

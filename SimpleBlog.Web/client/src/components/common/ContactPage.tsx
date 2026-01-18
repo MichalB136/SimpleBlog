@@ -152,7 +152,7 @@ export function ContactPage() {
                 <i className="bi bi-envelope text-primary me-2"></i>
                 Email
               </h6>
-              <p className="text-muted">contact@simpleblog.com</p>
+              <p className="text-muted">zamowienia@simpleblog.local</p>
             </div>
             <div className="col-md-6 mb-3">
               <h6 className="mb-2">

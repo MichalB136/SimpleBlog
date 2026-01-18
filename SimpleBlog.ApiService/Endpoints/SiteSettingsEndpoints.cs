@@ -55,6 +55,7 @@ public static class SiteSettingsEndpoints
 
     private static async Task<IResult> GetSiteSettings(
         ISiteSettingsRepository repository,
+        IImageStorageService imageStorage,
         CancellationToken ct)
     {
         var settings = await repository.GetAsync(ct);
@@ -71,7 +72,15 @@ public static class SiteSettingsEndpoints
             ));
         }
 
-        return Results.Ok(settings);
+        // Generate signed URL for private logo if exists
+        var settingsWithSignedUrl = settings with
+        {
+            LogoUrl = settings.LogoUrl is not null
+                ? imageStorage.GenerateSignedUrl(settings.LogoUrl, expirationMinutes: 60)
+                : null
+        };
+
+        return Results.Ok(settingsWithSignedUrl);
     }
 
     private static async Task<IResult> UpdateSiteSettings(
@@ -142,8 +151,16 @@ public static class SiteSettingsEndpoints
             var username = context.User.Identity?.Name ?? "Unknown";
             var settings = await repository.UpdateLogoAsync(logoUrl, username, ct);
 
+            // Generate signed URL for response
+            var settingsWithSignedUrl = settings with
+            {
+                LogoUrl = settings.LogoUrl is not null
+                    ? imageStorage.GenerateSignedUrl(settings.LogoUrl, expirationMinutes: 60)
+                    : null
+            };
+
             logger.LogInformation("Logo uploaded successfully by {UserName}: {LogoUrl}", username, logoUrl);
-            return Results.Ok(settings);
+            return Results.Ok(settingsWithSignedUrl);
         }
         catch (Exception ex)
         {
@@ -174,7 +191,7 @@ public static class SiteSettingsEndpoints
             var settings = await repository.UpdateLogoAsync(null, username, ct);
 
             logger.LogInformation("Logo deleted successfully by {UserName}", username);
-            return Results.Ok(settings);
+            return Results.Ok(settings); // No logo, so no signed URL needed
         }
         catch (Exception ex)
         {

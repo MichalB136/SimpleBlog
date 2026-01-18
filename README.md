@@ -1,6 +1,22 @@
 # SimpleBlog
 
-Aplikacja blogowa zbudowana w oparciu o .NET Aspire.
+Platforma e-commerce dla ręcznie robionych ubrań, zbudowana w oparciu o .NET Aspire.
+
+## 🎯 O projekcie
+
+SimpleBlog to platforma do prezentacji i przyjmowania zamówień na ręcznie robione ubrania (ciuchy):
+- **Artykuły o modzie** - inspiracje, tutoriale szycia, za kulisami produkcji
+- **Katalog produktów** - ręcznie robione sukienki, koszulki, spodnie i akcesoria
+- **Sklep online** - przeglądanie kolekcji z możliwością zamówienia
+- **System tagów** - kategoryzacja według stylu, materiału, okazji
+- **Multi-image support** - galerie zdjęć dla każdego produktu i artykułu
+
+### Technologie
+- Backend: .NET 9.0 + ASP.NET Core + .NET Aspire
+- Frontend: React 18 + TypeScript + Vite
+- Baza danych: PostgreSQL + Entity Framework Core
+- Przechowywanie obrazów: Cloudinary
+- Autoryzacja: JWT Bearer tokens
 
 ## Wymagania
 
@@ -50,9 +66,12 @@ Po uruchomieniu aplikacji otworzy się Aspire Dashboard, który pokazuje:
 Dashboard będzie dostępny pod adresem wyświetlonym w konsoli (zazwyczaj `http://localhost:15xxx`).
 
 Aplikacja składa się z:
-- **SimpleBlog.Web** - Aplikacja Blazor (frontend)
+- **SimpleBlog.Web** - Aplikacja React SPA (frontend)
 - **SimpleBlog.ApiService** - API REST (backend)
+- **SimpleBlog.Blog.Services** - Usługi dla artykułów i tagów
+- **SimpleBlog.Shop.Services** - Usługi dla produktów i zamówień
 - **PostgreSQL** - Baza danych (kontener Docker via docker-compose)
+- **Cloudinary** - Przechowywanie obrazów produktów
 
 ## Baza danych
 

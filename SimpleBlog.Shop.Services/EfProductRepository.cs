@@ -19,6 +19,8 @@ public sealed class EfProductRepository(
             {
                 var total = await context.Products.CountAsync();
                 var entities = await context.Products
+                    .Include(p => p.ProductTags)
+                        .ThenInclude(pt => pt.Tag)
                     .OrderByDescending(p => p.CreatedAt)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
@@ -41,7 +43,10 @@ public sealed class EfProductRepository(
             "GetProductById",
             async () =>
             {
-                var entity = await context.Products.FirstOrDefaultAsync(p => p.Id == id);
+                var entity = await context.Products
+                    .Include(p => p.ProductTags)
+                        .ThenInclude(pt => pt.Tag)
+                    .FirstOrDefaultAsync(p => p.Id == id);
                 return entity is not null ? MapToModel(entity) : null;
             },
             new { ProductId = id });
@@ -249,8 +254,18 @@ public sealed class EfProductRepository(
             new { searchTerm, page, pageSize, SpecName = nameof(ProductsSearchSpecification) });
     }
 
-    private static Product MapToModel(ProductEntity entity) =>
-        new(
+    private static Product MapToModel(ProductEntity entity)
+    {
+        var tags = entity.ProductTags
+            .Select(pt => new Tag(
+                pt.Tag.Id,
+                pt.Tag.Name,
+                pt.Tag.Slug,
+                pt.Tag.Color,
+                pt.Tag.CreatedAt))
+            .ToList();
+
+        return new Product(
             entity.Id,
             entity.Name,
             entity.Description,
@@ -258,6 +273,42 @@ public sealed class EfProductRepository(
             entity.ImageUrl,
             entity.Category,
             entity.Stock,
-            entity.CreatedAt
+            entity.CreatedAt,
+            tags
         );
+    }
+
+    public async Task<Product?> AssignTagsAsync(Guid productId, List<Guid> tagIds)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "AssignTags",
+            "Product",
+            async () =>
+            {
+                var entity = await context.Products
+                    .Include(p => p.ProductTags)
+                        .ThenInclude(pt => pt.Tag)
+                    .FirstOrDefaultAsync(p => p.Id == productId);
+                
+                if (entity is null)
+                    return null;
+
+                // Remove existing tags
+                context.ProductTags.RemoveRange(entity.ProductTags);
+
+                // Add new tags
+                foreach (var tagId in tagIds)
+                {
+                    entity.ProductTags.Add(new ProductTagEntity
+                    {
+                        ProductId = productId,
+                        TagId = tagId
+                    });
+                }
+
+                await context.SaveChangesAsync();
+                return MapToModel(entity);
+            },
+            new { ProductId = productId, TagCount = tagIds.Count });
+    }
 }

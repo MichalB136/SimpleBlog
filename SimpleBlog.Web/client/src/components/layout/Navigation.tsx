@@ -12,9 +12,9 @@ export function Navigation({ onLogout }: Readonly<NavigationProps>) {
   const location = useLocation();
 
   const tabs = [
-    { id: 'home', label: 'Home', icon: 'house-door', path: '/' },
+    { id: 'home', label: 'Inspiracje', icon: 'house-door', path: '/' },
     { id: 'about', label: 'O mnie', icon: 'person', path: '/about' },
-    { id: 'shop', label: 'Sklep', icon: 'shop', path: '/shop' },
+    { id: 'shop', label: 'Kolekcja', icon: 'shop', path: '/shop' },
     { id: 'contact', label: 'Kontakt', icon: 'envelope', path: '/contact' },
   ];
 

@@ -7,4 +7,6 @@ export const productsApi = {
   create: (request: CreateProductRequest) => apiClient.post<Product>('/products', request),
   update: (id: string, request: UpdateProductRequest) => apiClient.put<Product>(`/products/${id}`, request),
   delete: (id: string) => apiClient.delete<void>(`/products/${id}`),
+  assignTags: (productId: string, tagIds: string[]) =>
+    apiClient.put<Product>(`/products/${productId}/tags`, { tagIds }),
 };

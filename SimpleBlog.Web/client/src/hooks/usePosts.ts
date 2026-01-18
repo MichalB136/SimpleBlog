@@ -34,9 +34,12 @@ export function usePosts() {
   }, [refresh]);
 
   const create = useCallback(
-    async (payload: any) => {
+    async (payload: any, files?: File[], tagIds?: string[]) => {
       try {
-        await postsApi.create(payload);
+        const created = await postsApi.create(payload, files);
+        if (tagIds && tagIds.length > 0) {
+          await postsApi.assignTags(created.id, tagIds);
+        }
         await refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create post');
@@ -44,6 +47,23 @@ export function usePosts() {
       }
     },
     [refresh]
+  );
+
+  const update = useCallback(
+    async (id: string, payload: any, tagIds?: string[]) => {
+      try {
+        let updated = await postsApi.update(id, payload);
+        if (tagIds) {
+          updated = await postsApi.assignTags(id, tagIds);
+        }
+        setPosts((prev) => sortPosts(prev.map((p) => (p.id === id ? updated : p))));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update post');
+        throw err;
+      }
+    },
+    [sortPosts]
   );
 
   const delete_ = useCallback(
@@ -95,5 +115,33 @@ export function usePosts() {
     []
   );
 
-  return { posts, loading, error, refresh, create, delete: delete_, togglePin, addComment, setError };
+  const addImage = useCallback(
+    async (postId: string, file: File) => {
+      try {
+        const updated = await postsApi.addImage(postId, file);
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add image');
+        throw err;
+      }
+    },
+    []
+  );
+
+  const removeImage = useCallback(
+    async (postId: string, imageUrl: string) => {
+      try {
+        const updated = await postsApi.removeImage(postId, imageUrl);
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove image');
+        throw err;
+      }
+    },
+    []
+  );
+
+  return { posts, loading, error, refresh, create, update, delete: delete_, togglePin, addComment, addImage, removeImage, setError };
 }

@@ -130,6 +130,55 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("SimpleBlog.Shop.Services.ProductTagEntity", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ProductId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("ProductTags");
+                });
+
+            modelBuilder.Entity("SimpleBlog.Shop.Services.TagEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tags");
+                });
+
             modelBuilder.Entity("SimpleBlog.Shop.Services.OrderItemEntity", b =>
                 {
                     b.HasOne("SimpleBlog.Shop.Services.OrderEntity", "Order")
@@ -141,9 +190,38 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("SimpleBlog.Shop.Services.ProductTagEntity", b =>
+                {
+                    b.HasOne("SimpleBlog.Shop.Services.ProductEntity", "Product")
+                        .WithMany("ProductTags")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SimpleBlog.Shop.Services.TagEntity", "Tag")
+                        .WithMany("ProductTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("SimpleBlog.Shop.Services.OrderEntity", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("SimpleBlog.Shop.Services.ProductEntity", b =>
+                {
+                    b.Navigation("ProductTags");
+                });
+
+            modelBuilder.Entity("SimpleBlog.Shop.Services.TagEntity", b =>
+                {
+                    b.Navigation("ProductTags");
                 });
 #pragma warning restore 612, 618
         }

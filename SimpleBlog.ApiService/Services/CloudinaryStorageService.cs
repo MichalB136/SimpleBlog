@@ -29,7 +29,9 @@ public sealed class CloudinaryStorageService(
                 Folder = $"{_rootFolder}/{folder}",
                 UseFilename = true,
                 UniqueFilename = false,
-                Overwrite = true
+                Overwrite = true,
+                PublicId = Path.GetFileNameWithoutExtension(fileName),
+                Type = "private"  // Private upload type - requires signed URLs
             };
 
             var uploadResult = await cloudinary.UploadAsync(uploadParams, cancellationToken);
@@ -47,7 +49,12 @@ public sealed class CloudinaryStorageService(
                 "Image uploaded successfully to Cloudinary: {PublicId}",
                 uploadResult.PublicId);
 
-            return uploadResult.SecureUrl.ToString();
+            // For private images, return only the public_id with a marker prefix
+            // We'll generate signed URLs on-demand when retrieving settings
+            // Format: cloudinary://public_id
+            return uploadResult.Type == "private" 
+                ? $"cloudinary://{uploadResult.PublicId}"
+                : uploadResult.SecureUrl.ToString();
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
@@ -68,9 +75,10 @@ public sealed class CloudinaryStorageService(
 
         try
         {
-            // Extract public ID from Cloudinary URL
-            // Example: https://res.cloudinary.com/demo/image/upload/v1234567890/simpleblog/logos/logo.jpg
-            var publicId = ExtractPublicIdFromUrl(imageUrl);
+            // Check if this is our internal format (cloudinary://public_id) or legacy format
+            var publicId = imageUrl.StartsWith("cloudinary://")
+                ? imageUrl["cloudinary://".Length..]
+                : ExtractPublicIdFromUrl(imageUrl) ?? string.Empty;
             
             if (string.IsNullOrEmpty(publicId))
             {
@@ -80,7 +88,12 @@ public sealed class CloudinaryStorageService(
                 return false;
             }
 
-            var deletionParams = new DeletionParams(publicId);
+            var deletionParams = new DeletionParams(publicId)
+            {
+                ResourceType = ResourceType.Image,
+                Type = "private" // Try private first, will fall back if needed
+            };
+            
             var deletionResult = await cloudinary.DestroyAsync(deletionParams);
 
             var success = deletionResult.Result == "ok";
@@ -111,21 +124,110 @@ public sealed class CloudinaryStorageService(
         }
     }
 
+    public string GenerateSignedUrl(string imageUrl, int expirationMinutes = 60)
+    {
+        ArgumentNullException.ThrowIfNull(imageUrl);
+
+        try
+        {
+            string publicId;
+            string? format = null;
+            string deliveryType;
+
+            // Check if this is our internal format (cloudinary://public_id)
+            if (imageUrl.StartsWith("cloudinary://"))
+            {
+                publicId = imageUrl["cloudinary://".Length..];
+                deliveryType = "private"; // Our internal format is always private
+                
+                // Extract format if present in public_id
+                var lastDot = publicId.LastIndexOf('.');
+                if (lastDot > 0)
+                {
+                    format = publicId[(lastDot + 1)..];
+                    publicId = publicId[..lastDot];
+                }
+            }
+            else
+            {
+                // Legacy format - full URL
+                publicId = ExtractPublicIdFromUrl(imageUrl) ?? string.Empty;
+                if (string.IsNullOrEmpty(publicId))
+                {
+                    logger.LogWarning(
+                        "Could not extract public ID from URL for signing: {ImageUrl}",
+                        imageUrl);
+                    return imageUrl; // Fallback to original URL
+                }
+
+                deliveryType = ExtractDeliveryTypeFromUrl(imageUrl);
+                format = ExtractFormatFromUrl(imageUrl);
+            }
+
+            // Generate signed URL using Cloudinary SDK
+            var urlBuilder = cloudinary.Api.UrlImgUp
+                .Type(deliveryType)
+                .Secure()
+                .Signed(true);
+
+            // Add format if available
+            if (!string.IsNullOrEmpty(format))
+            {
+                urlBuilder = urlBuilder.Format(format);
+            }
+
+            var signedUrl = urlBuilder.BuildUrl(publicId);
+
+            logger.LogDebug(
+                "Generated signed URL for {PublicId} with type {Type}",
+                publicId,
+                deliveryType);
+
+            return signedUrl;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error generating signed URL for: {ImageUrl}",
+                imageUrl);
+            return imageUrl; // Fallback to original URL
+        }
+    }
+
+    private static string ExtractDeliveryTypeFromUrl(string imageUrl)
+    {
+        // Extract delivery type (upload, private, authenticated) from URL
+        var uri = new Uri(imageUrl);
+        var segments = uri.AbsolutePath.Split('/');
+        
+        var typeIndex = Array.FindIndex(segments, s => s is "upload" or "private" or "authenticated");
+        return typeIndex >= 0 ? segments[typeIndex] : "upload";
+    }
+
     private static string? ExtractPublicIdFromUrl(string imageUrl)
     {
         // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{format}
-        // We need to extract the public_id part
+        // or for private: https://res.cloudinary.com/{cloud_name}/image/private/v{version}/{public_id}.{format}
+        // We need to extract the public_id part (without version and extension)
         
         var uri = new Uri(imageUrl);
         var segments = uri.AbsolutePath.Split('/');
         
-        // Find "upload" segment and take everything after version number
-        var uploadIndex = Array.IndexOf(segments, "upload");
-        if (uploadIndex == -1 || uploadIndex + 2 >= segments.Length)
+        // Find "upload" or "private" segment
+        var typeIndex = Array.FindIndex(segments, s => s is "upload" or "private");
+        if (typeIndex == -1 || typeIndex + 1 >= segments.Length)
             return null;
 
-        // Skip "upload" and version (v1234567890)
-        var publicIdParts = segments[(uploadIndex + 2)..];
+        // Collect all parts after type (including version)
+        // Example: ["v1768682471", "dev_simpleblog", "logos", "1_ettnpg.png"]
+        var parts = segments[(typeIndex + 1)..];
+        
+        // Skip version segment (starts with 'v' followed by digits)
+        var publicIdParts = parts.Length > 0 && parts[0].StartsWith('v') && parts[0].Length > 1
+            ? parts[1..]
+            : parts;
+
         var publicIdWithExtension = string.Join("/", publicIdParts);
         
         // Remove file extension
@@ -133,5 +235,20 @@ public sealed class CloudinaryStorageService(
         return lastDotIndex > 0 
             ? publicIdWithExtension[..lastDotIndex] 
             : publicIdWithExtension;
+    }
+
+    private static string? ExtractFormatFromUrl(string imageUrl)
+    {
+        // Extract file extension (format) from URL
+        var uri = new Uri(imageUrl);
+        var path = uri.AbsolutePath;
+        var lastDotIndex = path.LastIndexOf('.');
+        
+        if (lastDotIndex > 0 && lastDotIndex < path.Length - 1)
+        {
+            return path[(lastDotIndex + 1)..];
+        }
+        
+        return null;
     }
 }

@@ -12,7 +12,7 @@ public sealed class ValidationTests
     public void CreatePostRequest_InvalidTitle_ShouldBeValidated(string? title)
     {
         // Arrange & Act
-        var request = new CreatePostRequest(title!, "Content", "Author", null);
+        var request = new CreatePostRequest(title!, "Content", "Author");
 
         // Assert
         Assert.True(string.IsNullOrWhiteSpace(request.Title));
@@ -26,7 +26,7 @@ public sealed class ValidationTests
     public void CreatePostRequest_InvalidContent_ShouldBeValidated(string? content)
     {
         // Arrange & Act
-        var request = new CreatePostRequest("Title", content!, "Author", null);
+        var request = new CreatePostRequest("Title", content!, "Author");
 
         // Assert
         Assert.True(string.IsNullOrWhiteSpace(request.Content));
@@ -36,13 +36,12 @@ public sealed class ValidationTests
     public void CreatePostRequest_ValidData_CreatesRequest()
     {
         // Arrange & Act
-        var request = new CreatePostRequest("Valid Title", "Valid Content", "Valid Author", "https://example.com/img.jpg");
+        var request = new CreatePostRequest("Valid Title", "Valid Content", "Valid Author");
 
         // Assert
         Assert.Equal("Valid Title", request.Title);
         Assert.Equal("Valid Content", request.Content);
         Assert.Equal("Valid Author", request.Author);
-        Assert.Equal("https://example.com/img.jpg", request.ImageUrl);
     }
 
     [Theory]
@@ -215,8 +214,9 @@ public sealed class ValidationTests
             {
                 new(commentId, postId, "Commenter", "Comment text", DateTimeOffset.UtcNow)
             },
-            null,
-            false
+            null!,
+            false,
+            []
         );
 
         // Assert
@@ -237,7 +237,8 @@ public sealed class ValidationTests
             null,
             "Category",
             100,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            []
         );
 
         // Act

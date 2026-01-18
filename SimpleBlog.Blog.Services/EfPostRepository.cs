@@ -19,6 +19,8 @@ public sealed class EfPostRepository(
             {
                 var total = await context.Posts.CountAsync();
                 var entities = await context.Posts
+                    .Include(p => p.PostTags)
+                        .ThenInclude(pt => pt.Tag)
                     .OrderByDescending(p => p.IsPinned)
                     .ThenByDescending(p => p.CreatedAt)
                     .Skip((page - 1) * pageSize)
@@ -44,6 +46,8 @@ public sealed class EfPostRepository(
             {
                 var entity = await context.Posts
                     .Include(p => p.Comments)
+                    .Include(p => p.PostTags)
+                        .ThenInclude(pt => pt.Tag)
                     .FirstOrDefaultAsync(p => p.Id == id);
                 return entity is not null ? MapToModel(entity) : null;
             },
@@ -64,7 +68,7 @@ public sealed class EfPostRepository(
                     Content = request.Content,
                     Author = request.Author ?? "Anon",
                     CreatedAt = DateTimeOffset.UtcNow,
-                    ImageUrl = request.ImageUrl
+                    ImageUrls = "[]" // Start with empty array
                 };
 
                 context.Posts.Add(entity);
@@ -91,8 +95,6 @@ public sealed class EfPostRepository(
                     entity.Content = request.Content;
                 if (request.Author is not null)
                     entity.Author = request.Author;
-                if (request.ImageUrl is not null)
-                    entity.ImageUrl = request.ImageUrl;
 
                 await context.SaveChangesAsync();
                 return MapToModel(entity);
@@ -282,6 +284,21 @@ public sealed class EfPostRepository(
             .Select(MapCommentToModel)
             .ToList();
 
+        // Deserialize ImageUrls JSON array (handle empty string as empty array)
+        var imageUrls = string.IsNullOrWhiteSpace(entity.ImageUrls)
+            ? []
+            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.ImageUrls) ?? [];
+
+        // Map tags
+        var tags = entity.PostTags
+            .Select(pt => new Tag(
+                pt.Tag.Id,
+                pt.Tag.Name,
+                pt.Tag.Slug,
+                pt.Tag.Color,
+                pt.Tag.CreatedAt))
+            .ToList();
+
         return new Post(
             entity.Id,
             entity.Title,
@@ -289,9 +306,94 @@ public sealed class EfPostRepository(
             entity.Author,
             entity.CreatedAt,
             orderedComments,
-            entity.ImageUrl,
-            entity.IsPinned
+            imageUrls,
+            entity.IsPinned,
+            tags
         );
+    }
+
+    public async Task<Post?> AddImageAsync(Guid postId, string imageUrl)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "AddImage",
+            "Post",
+            async () =>
+            {
+                var entity = await context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+                if (entity is null)
+                    return null;
+
+                var imageUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.ImageUrls) ?? [];
+                
+                if (!imageUrls.Contains(imageUrl))
+                {
+                    imageUrls.Add(imageUrl);
+                    entity.ImageUrls = System.Text.Json.JsonSerializer.Serialize(imageUrls);
+                    await context.SaveChangesAsync();
+                }
+
+                return MapToModel(entity);
+            },
+            new { PostId = postId, ImageUrl = imageUrl });
+    }
+
+    public async Task<Post?> RemoveImageAsync(Guid postId, string imageUrl)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "RemoveImage",
+            "Post",
+            async () =>
+            {
+                var entity = await context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+                if (entity is null)
+                    return null;
+
+                var imageUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.ImageUrls) ?? [];
+                
+                if (imageUrls.Remove(imageUrl))
+                {
+                    entity.ImageUrls = System.Text.Json.JsonSerializer.Serialize(imageUrls);
+                    await context.SaveChangesAsync();
+                }
+
+                return MapToModel(entity);
+            },
+            new { PostId = postId, ImageUrl = imageUrl });
+    }
+
+    public async Task<Post?> AssignTagsAsync(Guid postId, List<Guid> tagIds)
+    {
+        return await operationLogger.LogRepositoryOperationAsync(
+            "AssignTags",
+            "Post",
+            async () =>
+            {
+                var entity = await context.Posts
+                    .Include(p => p.PostTags)
+                        .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.Comments)
+                    .FirstOrDefaultAsync(p => p.Id == postId);
+                
+                if (entity is null)
+                    return null;
+
+                // Remove existing tags
+                context.PostTags.RemoveRange(entity.PostTags);
+
+                // Add new tags
+                foreach (var tagId in tagIds)
+                {
+                    entity.PostTags.Add(new PostTagEntity
+                    {
+                        PostId = postId,
+                        TagId = tagId
+                    });
+                }
+
+                await context.SaveChangesAsync();
+                return MapToModel(entity);
+            },
+            new { PostId = postId, TagCount = tagIds.Count });
     }
 
     private static Comment MapCommentToModel(CommentEntity entity) =>

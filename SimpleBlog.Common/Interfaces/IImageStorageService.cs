@@ -28,4 +28,12 @@ public interface IImageStorageService
     Task<bool> DeleteImageAsync(
         string imageUrl,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generate a signed URL for private image access
+    /// </summary>
+    /// <param name="imageUrl">Original image URL</param>
+    /// <param name="expirationMinutes">URL expiration time in minutes (default: 60)</param>
+    /// <returns>Signed URL valid for specified duration</returns>
+    string GenerateSignedUrl(string imageUrl, int expirationMinutes = 60);
 }

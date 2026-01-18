@@ -1,16 +1,18 @@
 import React from 'react';
 import type { Post } from '@/types/post';
+import { TagBadges } from '@/components/common/TagSelector';
 import { CommentForm } from './CommentForm';
 
 interface PostListProps {
   posts: Post[];
   isAdmin: boolean;
   onDelete?: (id: string) => void;
+  onEdit?: (post: Post) => void;
   onAddComment?: (postId: string, payload: any) => void;
   onTogglePin?: (post: Post) => void;
 }
 
-export function PostList({ posts, isAdmin, onDelete, onAddComment, onTogglePin }: PostListProps) {
+export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTogglePin }: PostListProps) {
   const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
 
   if (!posts.length) {
@@ -32,9 +34,9 @@ export function PostList({ posts, isAdmin, onDelete, onAddComment, onTogglePin }
               style={{ cursor: 'pointer' }}
               onClick={() => setSelectedPost(post)}
             >
-              {post.imageUrl && (
+              {post.imageUrls && post.imageUrls.length > 0 && (
                 <img
-                  src={post.imageUrl}
+                  src={post.imageUrls[0]}
                   className="card-img-top"
                   style={{ height: '200px', objectFit: 'cover' }}
                   alt={post.title}
@@ -58,6 +60,11 @@ export function PostList({ posts, isAdmin, onDelete, onAddComment, onTogglePin }
                     <small className="text-muted">
                       <i className="bi bi-person me-1"></i>{post.author || 'Anon'}
                     </small>
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="mt-2">
+                        <TagBadges tags={post.tags} />
+                      </div>
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="btn-group">
@@ -67,6 +74,16 @@ export function PostList({ posts, isAdmin, onDelete, onAddComment, onTogglePin }
                         title={post.isPinned ? 'Odepnij' : 'Przytnij'}
                       >
                         <i className={post.isPinned ? 'bi bi-pin-angle-fill' : 'bi bi-pin-angle'}></i>
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit?.(post);
+                        }}
+                        title="Edytuj"
+                      >
+                        <i className="bi bi-pencil"></i>
                       </button>
                       <button
                         className="btn btn-sm btn-outline-danger"
@@ -130,13 +147,23 @@ export function PostList({ posts, isAdmin, onDelete, onAddComment, onTogglePin }
                   ></button>
                 </div>
                 <div className="modal-body">
-                  {selectedPost.imageUrl && (
-                    <img
-                      src={selectedPost.imageUrl}
-                      className="img-fluid rounded mb-4"
-                      style={{ maxHeight: '500px', width: '100%', objectFit: 'contain' }}
-                      alt={selectedPost.title}
-                    />
+                  {selectedPost.imageUrls && selectedPost.imageUrls.length > 0 && (
+                    <div className="mb-4">
+                      {selectedPost.imageUrls.map((url, index) => (
+                        <img
+                          key={index}
+                          src={url}
+                          className="img-fluid rounded mb-3"
+                          style={{ maxHeight: '500px', width: '100%', objectFit: 'contain' }}
+                          alt={`${selectedPost.title} - zdjęcie ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {selectedPost.tags && selectedPost.tags.length > 0 && (
+                    <div className="mb-3">
+                      <TagBadges tags={selectedPost.tags} />
+                    </div>
                   )}
                   <p className="fs-5 lh-lg" style={{ whiteSpace: 'pre-wrap' }}>
                     {selectedPost.content}

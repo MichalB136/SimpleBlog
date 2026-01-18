@@ -33,11 +33,13 @@
 - [database-schema.md](./database-schema.md) - Database schema
 - [entity-relationships.md](./entity-relationships.md) - Relationships between entities
 - [ef-core-configuration.md](./ef-core-configuration.md) - EF Core configuration
+- [entity-framework-migrations.md](./entity-framework-migrations.md) - EF Core migrations management and troubleshooting
 
 ### API Design
 - [api-specification.md](./api-specification.md) - API endpoints specification
 - [authentication-flow.md](./authentication-flow.md) - JWT authentication flow
 - [error-handling.md](./error-handling.md) - Error handling and responses
+- [image-upload-tags-api.md](./image-upload-tags-api.md) - Multi-image upload and tag system API guide
 
 ### Security
 - [security-architecture.md](./security-architecture.md) - Security architecture

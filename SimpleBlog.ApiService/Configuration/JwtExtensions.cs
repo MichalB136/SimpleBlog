@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using static SimpleBlog.ApiService.SeedDataConstants;
 
 namespace SimpleBlog.ApiService.Configuration;
 
@@ -59,7 +60,7 @@ public static class JwtExtensions
         builder.Services.AddAuthorization(options =>
         {
             options.AddPolicy("AdminOnly", policy =>
-                policy.RequireRole("Admin"));
+                policy.RequireRole(AdminRole));
         });
 
         return (jwtIssuer, jwtAudience, key);

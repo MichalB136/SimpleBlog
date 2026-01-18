@@ -1,14 +1,31 @@
 <!-- Instrukcje dla asystentów AI / Copilot oraz krótkie wskazówki dla kontrybutorów projektu SimpleBlog -->
 # Instrukcje Copilot / Asystenta dla repozytorium SimpleBlog
 
-Krótki przewodnik dla AI (Copilot) i programistów pracujących nad `SimpleBlog`.
+Krótki przewodnik dla AI (Copilot) i programistów pracujących nad `SimpleBlog` - platformą do prezentacji i zamówień ręcznie robionych ubrań.
 
-1. Cel repozytorium
-- Prosty blog z backendem .NET (Aspire) oraz frontendem SPA w `SimpleBlog.Web/wwwroot`.
-- Backend używa minimal APIs w `SimpleBlog.ApiService/Program.cs` (posts, comments, JWT auth).
-- Frontend to prosta React-UMD aplikacja w `SimpleBlog.Web/wwwroot` (`index.html`, `app.js`, `styles.css`).
+## 🎯 KONTEKST BIZNESOWY - OBOWIĄZKOWE DO PRZESTRZEGANIA
 
-2. Uruchamianie lokalne (deweloperskie)
+**SimpleBlog to platforma e-commerce dla ręcznie robionych ubrań (ciuchów):**
+- Główny cel: Prezentacja kolekcji ręcznie robionych ubrań i przyjmowanie zamówień
+- Sekcja "Posts" = Artykuły o modzie, tutoriale szycia, inspiracje, za kulisami produkcji
+- Sekcja "Products" = Ręcznie robione ubrania (koszulki, sukienki, spodnie, akcesoria)
+- Sekcja "Shop" = Katalog produktów z możliwością zamówienia
+- Sekcja "About" = O twórcy/marce, proces produkcji, filozofia ręcznej roboty
+
+**Terminologia do używania:**
+- Zamiast "blog posts" → "artykuły o modzie" / "inspiracje" / "aktualności"
+- Zamiast "products" → "ręcznie robione ubrania" / "produkty"
+- "Shop" → "Sklep" / "Kolekcja"
+- "Orders" → "Zamówienia"
+- "Tags" → używaj do kategoryzacji (np. "Sukienki", "Casual", "Vintage", "Bawełna")
+
+## 1. Cel repozytorium
+- Platforma e-commerce dla ręcznie robionych ubrań z backendem .NET (Aspire) oraz frontendem React SPA.
+- Backend używa minimal APIs w `SimpleBlog.ApiService/Program.cs` (artykuły, produkty, zamówienia, JWT auth, tagi).
+- Frontend: React + TypeScript w `SimpleBlog.Web/client/src/` (Vite, routing, komponenty).
+- Funkcje: galeria produktów, system tagów, multi-image upload, zarządzanie treścią, autoryzacja admin.
+
+## 2. Uruchamianie lokalne (deweloperskie)
 - Z poziomu katalogu głównego:
   - `dotnet build SimpleBlog.sln`
   - `dotnet run --project SimpleBlog.AppHost` (lub uruchom z IDE)
@@ -31,7 +48,7 @@ Krótki przewodnik dla AI (Copilot) i programistów pracujących nad `SimpleBlog
 - Frontend: PascalCase dla komponentów, unikalne `key` przy mapowaniu list, ekstrakcja logiki do custom hooks (`useAuth`, `usePosts`), użycie `useCallback`/`useMemo` tam gdzie to ma sens.
 - Dodaj linting/formatowanie: `ESLint` + `Prettier` dla JS/TS; `dotnet format` lub narzędzie w CI dla C#.
 
-6. Testy i CI
+## 6. Testy i CI
 - Backend: xUnit + EF Core InMemory dla testów jednostkowych serwisów/repozytoriów.
 - Frontend: React Testing Library + Jest (jeśli migracja do bundlera); dla prostego wwwroot można dodać lekkie testy integracyjne w oddzielnym kroku.
 - CI: workflow uruchamia `dotnet build`, `dotnet test`, ewentualnie `npm ci && npm run build` jeśli front zostanie przeniesiony do `client/`.
@@ -41,13 +58,23 @@ Krótki przewodnik dla AI (Copilot) i programistów pracujących nad `SimpleBlog
 - Seedowane konto user: `user` / `user123` (dev only).
 
 8. Ograniczenia i uwagi produkcyjne
-- Obecne rozwiązanie przechowuje obrazy jako base64 w pamięci — nie stosować w produkcji. Zamiast tego: pliki na dysku/Blob storage + odwołania URL.
+- Obrazy są przechowywane w Cloudinary (private upload) z signed URLs.
 - JWT secret jest przeznaczony wyłącznie do celów deweloperskich — nie używać takiego klucza w produkcji.
+- System zamówień wymaga integracji z płatnościami (Stripe/PayU) - obecnie brak implementacji.
 
-9. Jak AI może pomóc (przykłady zadań)
-- Dodać EF Core + migracje i przejść z in-memory do SQLite.
-- Dodać upload obrazów do lokalnego folderu i generowanie thumbnaili.
-- Wprowadzić ESLint/Prettier i zrefaktoryzować `app.js` na modularną aplikację (components/hooks/services).
+## 9. Jak AI może pomóc (przykłady zadań)
+- Dodać system zamówień z obsługą statusów (nowe, w realizacji, wysłane, zakończone).
+- Zaimplementować integrację z płatnościami (Stripe/PayU).
+- Dodać filtry produktów po rozmiarze, kolorze, materiale.
+- Rozbudować system tagów o hierarchię kategorii (Ubrania > Sukienki > Letnie).
+- Dodać wishlist / ulubione produkty dla użytkowników.
+
+## 10. Przykładowe tagi dla produktów
+**Kategorie główne:** Sukienki, Koszulki, Spodnie, Akcesoria, Bielizna
+**Style:** Casual, Vintage, Boho, Eleganckie, Sportowe
+**Materiały:** Bawełna, Len, Wełna, Jedwab, Denim
+**Okazje:** Codzienne, Wieczorowe, Ślubne, Plażowe
+**Rozmiary:** XS, S, M, L, XL, XXL, Custom
 - Dodać testy jednostkowe i prosty workflow CI (GitHub Actions).
 
 10. Zasady bezpieczeństwa prywatności
@@ -1394,3 +1421,8 @@ dotnet run --project SimpleBlog.ApiService
 
 - Don't use sql scripts, all migrations must be done via EF Core Migrations
 - Don't use any other SQL provider other than localy hosted PostgreSQL via Docker
+
+
+## Documentation
+
+- documentation should be always under docs/ directory and should be done as per mentioned structure and guidelines

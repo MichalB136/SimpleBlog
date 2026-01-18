@@ -12,6 +12,23 @@ public interface IPostRepository
     Task<IReadOnlyList<Comment>?> GetCommentsAsync(Guid postId);
     Task<Comment?> AddCommentAsync(Guid postId, CreateCommentRequest request);
     Task<Post?> SetPinnedAsync(Guid id, bool isPinned);
+    
+    // Image management
+    Task<Post?> AddImageAsync(Guid postId, string imageUrl);
+    Task<Post?> RemoveImageAsync(Guid postId, string imageUrl);
+    
+    // Tag management
+    Task<Post?> AssignTagsAsync(Guid postId, List<Guid> tagIds);
+}
+
+public interface ITagRepository
+{
+    Task<IReadOnlyList<Tag>> GetAllAsync();
+    Task<Tag?> GetByIdAsync(Guid id);
+    Task<Tag?> GetBySlugAsync(string slug);
+    Task<Tag> CreateAsync(CreateTagRequest request);
+    Task<Tag?> UpdateAsync(Guid id, UpdateTagRequest request);
+    Task<bool> DeleteAsync(Guid id);
 }
 
 public interface IAboutMeRepository
@@ -27,6 +44,9 @@ public interface IProductRepository
     Task<Product> CreateAsync(CreateProductRequest request);
     Task<Product?> UpdateAsync(Guid id, UpdateProductRequest request);
     Task<bool> DeleteAsync(Guid id);
+    
+    // Tag management
+    Task<Product?> AssignTagsAsync(Guid productId, List<Guid> tagIds);
 }
 
 public interface IOrderRepository

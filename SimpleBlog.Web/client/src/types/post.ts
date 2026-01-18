@@ -4,9 +4,18 @@ export interface Post {
   content: string;
   author: string;
   createdAt: string;
-  imageUrl?: string;
+  imageUrls: string[];
   isPinned: boolean;
   comments?: Comment[];
+  tags?: Tag[];
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+  color?: string;
+  createdAt: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -23,14 +32,12 @@ export interface CreatePostRequest {
   title: string;
   content: string;
   author: string;
-  imageUrl?: string;
 }
 
 export interface UpdatePostRequest {
   title: string;
   content: string;
   author: string;
-  imageUrl?: string;
 }
 
 export interface Comment {

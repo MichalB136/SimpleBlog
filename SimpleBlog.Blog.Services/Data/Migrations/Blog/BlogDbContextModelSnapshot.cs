@@ -88,7 +88,8 @@ namespace SimpleBlog.Blog.Services.Data.Migrations.Blog
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ImageUrls")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsPinned")
@@ -101,6 +102,21 @@ namespace SimpleBlog.Blog.Services.Data.Migrations.Blog
                     b.HasKey("Id");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("SimpleBlog.Blog.Services.PostTagEntity", b =>
+                {
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PostId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PostTags");
                 });
 
             modelBuilder.Entity("SimpleBlog.Blog.Services.SiteSettingsEntity", b =>
@@ -130,6 +146,40 @@ namespace SimpleBlog.Blog.Services.Data.Migrations.Blog
                     b.ToTable("SiteSettings");
                 });
 
+            modelBuilder.Entity("SimpleBlog.Blog.Services.TagEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tags");
+                });
+
             modelBuilder.Entity("SimpleBlog.Blog.Services.CommentEntity", b =>
                 {
                     b.HasOne("SimpleBlog.Blog.Services.PostEntity", "Post")
@@ -141,9 +191,35 @@ namespace SimpleBlog.Blog.Services.Data.Migrations.Blog
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("SimpleBlog.Blog.Services.PostTagEntity", b =>
+                {
+                    b.HasOne("SimpleBlog.Blog.Services.PostEntity", "Post")
+                        .WithMany("PostTags")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SimpleBlog.Blog.Services.TagEntity", "Tag")
+                        .WithMany("PostTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("SimpleBlog.Blog.Services.PostEntity", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("PostTags");
+                });
+
+            modelBuilder.Entity("SimpleBlog.Blog.Services.TagEntity", b =>
+                {
+                    b.Navigation("PostTags");
                 });
 #pragma warning restore 612, 618
         }
