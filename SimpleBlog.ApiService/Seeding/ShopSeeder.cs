@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.Shop.Services;
+using static SimpleBlog.ApiService.SeedDataConstants;
 
 namespace SimpleBlog.ApiService.Seeding;
 
@@ -23,7 +24,7 @@ public static class ShopSeeder
                 Name = "Sukienka lniana 'Letnia Rosa'",
                 Description = "Zwiewna sukienka midi z naturalnego lnu. Idealna na letnie dni. Pastelowy róż podkreśla kobiecość. Rozmiar uniwersalny (S-M). Wymiary: długość 110cm, obwód w talii 70-85cm.",
                 Price = 289.99m,
-                Category = "Sukienki",
+                Category = CategoryDresses,
                 Stock = 3,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-15)
@@ -34,7 +35,7 @@ public static class ShopSeeder
                 Name = "Koszulka oversize 'Vintage Dreams'",
                 Description = "100% bawełna organiczna, oversizowy krój. Ręcznie malowany nadruk w stylu vintage. Unisex. Dostępne rozmiary: M, L, XL.",
                 Price = 129.99m,
-                Category = "Koszulki",
+                Category = CategoryTShirts,
                 Stock = 8,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-14)
@@ -45,7 +46,7 @@ public static class ShopSeeder
                 Name = "Spodnie lniane 'Boho Wide'",
                 Description = "Szerokie spodnie z lnu w stylu boho. Wysoki stan, gumka w pasie. Naturalna beżowa kolorystyka. Rozmiary: S, M, L.",
                 Price = 249.99m,
-                Category = "Spodnie",
+                Category = CategoryPants,
                 Stock = 5,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-13)
@@ -56,7 +57,7 @@ public static class ShopSeeder
                 Name = "Tunika bawełniana 'Minimalist'",
                 Description = "Minimalistyczna tunika z organicznej bawełny. Luźny krój, idealna do letnich stylizacji. Biała, rozmiar uniwersalny.",
                 Price = 179.99m,
-                Category = "Tuniki",
+                Category = CategoryTunics,
                 Stock = 6,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-10)
@@ -67,7 +68,7 @@ public static class ShopSeeder
                 Name = "Torba na ramię 'Eco Shopper'",
                 Description = "Ręcznie szyta torba z bawełny organicznej. Wzmocnione uchwyty, podszewka z lnu. Wymiary: 40x35cm. Idealna na zakupy lub jako torba plażowa.",
                 Price = 89.99m,
-                Category = "Akcesoria",
+                Category = CategoryAccessories,
                 Stock = 12,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-7)
@@ -78,7 +79,7 @@ public static class ShopSeeder
                 Name = "Sukienka maxi 'Bohemian Soul'",
                 Description = "Długa sukienka w stylu boho. Bawełna + len. Haftowane detale ręcznie wykonane. Pasek w talii. Rozmiary: S, M, L.",
                 Price = 399.99m,
-                Category = "Sukienki",
+                Category = CategoryDresses,
                 Stock = 2,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-5)

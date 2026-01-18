@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SimpleBlog.ApiService.Data;
+using static SimpleBlog.ApiService.SeedDataConstants;
 
 namespace SimpleBlog.ApiService.Seeding;
 
@@ -14,17 +15,14 @@ public static class IdentitySeeder
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-        const string adminRole = "Admin";
-        const string userRole = "User";
-
-        await EnsureRoleAsync(roleManager, adminRole, logger);
-        await EnsureRoleAsync(roleManager, userRole, logger);
+        await EnsureRoleAsync(roleManager, AdminRole, logger);
+        await EnsureRoleAsync(roleManager, UserRole, logger);
 
         var adminUsername = configuration["AdminSeed:Username"] ?? "admin";
         var adminEmail = configuration["AdminSeed:Email"] ?? "admin@example.com";
         var adminPassword = configuration["AdminSeed:Password"] ?? "ChangeMe123!";
 
-        await EnsureAdminAsync(userManager, adminUsername, adminEmail, adminPassword, adminRole, logger);
+        await EnsureAdminAsync(userManager, adminUsername, adminEmail, adminPassword, AdminRole, logger);
 
         // Seed mock users (development only)
         var mockUsers = configuration.GetSection("MockUsers").Get<List<MockUserConfig>>();
@@ -32,7 +30,7 @@ public static class IdentitySeeder
         {
             foreach (var mockUser in mockUsers)
             {
-                await EnsureMockUserAsync(userManager, mockUser.Username, mockUser.Email, mockUser.Password, userRole, logger);
+                await EnsureMockUserAsync(userManager, mockUser.Username, mockUser.Email, mockUser.Password, UserRole, logger);
             }
         }
     }
