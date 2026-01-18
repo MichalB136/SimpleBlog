@@ -44,14 +44,15 @@ jobs:
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+            /d:sonar.cs.opencover.reportsPaths=coverage.xml
           
           dotnet restore SimpleBlog.sln
           dotnet build SimpleBlog.sln --no-restore
 
-          dotnet-coverage collect 'dotnet test' -f xml  -o 'coverage.xml'
+          # Run tests and collect OpenCover-format coverage into coverage.xml
+          dotnet-coverage collect "dotnet test --no-build --logger trx;LogFileName=TestResults.trx" -f opencover -o coverage.xml
 
-          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths=coverage.xml
 
         
       - name: Quality Gate (optional)
