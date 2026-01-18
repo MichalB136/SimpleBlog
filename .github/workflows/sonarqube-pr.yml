@@ -64,6 +64,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
 
+      - name: Show report-task (diagnostic)
+        if: always()
+        run: |
+          ls -la .sonarqube/out/.sonar || true
+          cat .sonarqube/out/.sonar/report-task.txt || true
+
       - name: Quality Gate (optional)
         if: always() && hashFiles('.sonarqube/out/.sonar/report-task.txt') != ''
         uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
