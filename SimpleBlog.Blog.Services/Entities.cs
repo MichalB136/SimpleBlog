@@ -11,6 +11,27 @@ public class PostEntity
     public bool IsPinned { get; set; }
 
     public List<CommentEntity> Comments { get; set; } = new();
+    public List<PostTagEntity> PostTags { get; set; } = new();
+}
+
+public class TagEntity
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+    public string? Color { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public List<PostTagEntity> PostTags { get; set; } = new();
+}
+
+public class PostTagEntity
+{
+    public Guid PostId { get; set; }
+    public Guid TagId { get; set; }
+
+    public PostEntity Post { get; set; } = null!;
+    public TagEntity Tag { get; set; } = null!;
 }
 
 public class CommentEntity

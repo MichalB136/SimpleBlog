@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { useAuth } from '@/context/AuthContext';
+import { TagManagement } from './TagManagement';
+import { ProductManagement } from './ProductManagement';
+
+type AdminTab = 'site' | 'tags' | 'products';
 
 export function AdminPanel() {
   const { user } = useAuth();
@@ -9,6 +13,7 @@ export function AdminPanel() {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<AdminTab>('site');
 
   // Initialize selected theme when settings load
   if (settings && !selectedTheme) {
@@ -133,18 +138,65 @@ export function AdminPanel() {
         Panel Administratora
       </h2>
 
-      {message && (
-        <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`} role="alert">
-          <i className={`bi bi-${message.type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2`}></i>
-          {message.text}
+      {/* Tabs Navigation */}
+      <ul className="nav nav-tabs mb-4" role="tablist">
+        <li className="nav-item" role="presentation">
           <button
+            className={`nav-link ${activeTab === 'site' ? 'active' : ''}`}
+            onClick={() => setActiveTab('site')}
             type="button"
-            className="btn-close"
-            onClick={() => setMessage(null)}
-            aria-label="Close"
-          ></button>
-        </div>
-      )}
+            role="tab"
+            aria-selected={activeTab === 'site'}
+          >
+            <i className="bi bi-palette me-2"></i>
+            Ustawienia strony
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            className={`nav-link ${activeTab === 'tags' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tags')}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'tags'}
+          >
+            <i className="bi bi-tags me-2"></i>
+            Zarządzanie tagami
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            className={`nav-link ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveTab('products')}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'products'}
+          >
+            <i className="bi bi-bag me-2"></i>
+            Produkty
+          </button>
+        </li>
+      </ul>
+
+      {/* Tab Content */}
+      {activeTab === 'tags' ? (
+        <TagManagement />
+      ) : activeTab === 'products' ? (
+        <ProductManagement />
+      ) : (
+        <>
+          {message && (
+            <div className={`alert alert-${message.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`} role="alert">
+              <i className={`bi bi-${message.type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2`}></i>
+              {message.text}
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setMessage(null)}
+                aria-label="Close"
+              ></button>
+            </div>
+          )}
 
       <div className="card mb-4">
         <div className="card-header">
@@ -339,6 +391,8 @@ export function AdminPanel() {
           </p>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

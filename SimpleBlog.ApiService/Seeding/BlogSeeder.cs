@@ -18,8 +18,8 @@ public static class BlogSeeder
             new PostEntity
             {
                 Id = Guid.NewGuid(),
-                Title = "Witaj w SimpleBlog!",
-                Content = "To jest pierwszy post na naszym blogu. SimpleBlog to przykładowa aplikacja demonstrująca możliwości .NET Aspire z PostgreSQL.",
+                Title = "Witaj w naszej pracowni!",
+                Content = "Witaj w SimpleBlog - miejscu, gdzie ręczna praca spotyka się z pasją do mody. Każdy element naszej kolekcji jest szyty ręcznie z najwyższą starannością. Zapraszamy do odkrywania naszych unikalnych kreacji!",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-10),
                 ImageUrls = "[]",
@@ -29,14 +29,14 @@ public static class BlogSeeder
                     {
                         Id = Guid.NewGuid(),
                         Author = "user",
-                        Content = "Świetny start! Czekam na więcej postów.",
+                        Content = "Piękne ubrania! Czy macie też sukienki letnie?",
                         CreatedAt = DateTimeOffset.UtcNow.AddDays(-9)
                     },
                     new()
                     {
                         Id = Guid.NewGuid(),
                         Author = SeedDataConstants.AdminUsername,
-                        Content = "Dziękuję! Planujemy regularne publikacje.",
+                        Content = "Dziękujemy! Tak, nasza kolekcja letnich sukienek jest już dostępna w sklepie.",
                         CreatedAt = DateTimeOffset.UtcNow.AddDays(-8)
                     }
                 }
@@ -44,8 +44,8 @@ public static class BlogSeeder
             new PostEntity
             {
                 Id = Guid.NewGuid(),
-                Title = "Wprowadzenie do .NET Aspire",
-                Content = ".NET Aspire to framework do budowania aplikacji rozproszonych. Oferuje gotowe komponenty do orkiestracji, telemetrii i zarządzania zasobami.",
+                Title = "Filozofia ręcznej roboty",
+                Content = "Każdy element naszej odzieży powstaje ręcznie - od doboru materiałów, przez projektowanie, aż po ostatni ścieg. Wierzymy, że ręcznie robione ubrania mają duszę i charakteryzują się niepowtarzalną jakością, której nie da się zastąpić masową produkcją.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-7),
                 ImageUrls = "[]",
@@ -55,7 +55,7 @@ public static class BlogSeeder
                     {
                         Id = Guid.NewGuid(),
                         Author = "user",
-                        Content = "Czy Aspire wspiera PostgreSQL?",
+                        Content = "Z jakich materiałów szyjecie?",
                         CreatedAt = DateTimeOffset.UtcNow.AddDays(-6)
                     }
                 }
@@ -63,8 +63,8 @@ public static class BlogSeeder
             new PostEntity
             {
                 Id = Guid.NewGuid(),
-                Title = "PostgreSQL w praktyce",
-                Content = "PostgreSQL to potężny otwartoźródłowy system baz danych. W SimpleBlog używamy go do przechowywania postów, komentarzy i danych sklepu.",
+                Title = "Wybór materiałów - bawełna i len",
+                Content = "Stawiamy na naturalne materiały najwyższej jakości. Nasza kolekcja to głównie bawełna organiczna i len - materiały przyjazne dla skóry, oddychające i trwałe. Wszystkie tkaniny kupujemy od sprawdzonych dostawców z certyfikatami.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-5),
                 ImageUrls = "[]",
@@ -73,9 +73,9 @@ public static class BlogSeeder
             new PostEntity
             {
                 Id = Guid.NewGuid(),
-                Title = "Entity Framework Core Migrations",
-                Content = "EF Core Migrations pozwala na automatyczne zarządzanie schematem bazy danych. Nasza aplikacja automatycznie aplikuje migracje przy starcie.",
-                Author = "admin",
+                Title = "Proces powstawania sukienki",
+                Content = "Zapraszamy za kulisy! Każda sukienka przechodzi przez kilka etapów: projektowanie, dobór materiału, wstępny wykrój, szycie, przymiarki i finalne wykończenie. Cały proces trwa średnio 2-3 tygodnie, aby zapewnić najwyższą jakość.",
+                Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-3),
                 ImageUrls = "[]",
                 Comments = new List<CommentEntity>
@@ -84,14 +84,14 @@ public static class BlogSeeder
                     {
                         Id = Guid.NewGuid(),
                         Author = "user",
-                        Content = "Jak tworzyć nową migrację?",
+                        Content = "Czy możliwe są indywidualne zamówienia?",
                         CreatedAt = DateTimeOffset.UtcNow.AddDays(-2)
                     },
                     new()
                     {
                         Id = Guid.NewGuid(),
                         Author = SeedDataConstants.AdminUsername,
-                        Content = "Użyj: dotnet ef migrations add NazwaMigracji",
+                        Content = "Tak! Chętnie realizujemy zamówienia szyte na miarę. Skontaktuj się z nami przez formularz.",
                         CreatedAt = DateTimeOffset.UtcNow.AddDays(-1)
                     }
                 }
@@ -99,8 +99,8 @@ public static class BlogSeeder
             new PostEntity
             {
                 Id = Guid.NewGuid(),
-                Title = "Docker i docker-compose",
-                Content = "Docker pozwala na łatwe uruchamianie PostgreSQL lokalnie. SimpleBlog używa docker-compose do zarządzania infrastrukturą.",
+                Title = "Trendy wiosna/lato 2026",
+                Content = "W nadchodzącym sezonie stawiamy na lekkość i naturalność. W naszej kolekcji dominują pastelowe kolory, luźne kroje i przewiewne tkaniny. Przygotowaliśmy dla Was unikalne sukienki maxi, zwiewne spódnice i bawełniane topy.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
                 ImageUrls = "[]",
@@ -120,7 +120,7 @@ public static class BlogSeeder
             var about = new AboutMeEntity
             {
                 Id = Guid.NewGuid(),
-                Content = "Witaj na moim blogu! Jestem pasjonatem programowania i chętnie dzielę się wiedzą. Ten blog powstał w oparciu o .NET 9, Aspire oraz React.",
+                Content = "Witaj w SimpleBlog! Jestem pasjonatką mody i szycia. Od lat tworzę unikalne, ręcznie szyte ubrania, które łączą wygodę, styl i wysoką jakość. Każda kreacja jest tworzona z myślą o Tobie - indywidualnie, z pasją i dbałością o każdy detal. Zapraszam do odkrywania mojej kolekcji!",
                 UpdatedAt = DateTimeOffset.UtcNow,
                 UpdatedBy = SeedDataConstants.SystemUsername
             };

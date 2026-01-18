@@ -15,6 +15,7 @@
 - **[git-workflow.md](./git-workflow.md)** - GitFlow strategy, branching, and commit conventions
 - **[react-router-guide.md](./react-router-guide.md)** - React Router implementation and SPA routing
 - **[admin-features.md](./admin-features.md)** - Admin panel features (themes, logo management)
+- **[content-management-features.md](./content-management-features.md)** - Multi-image uploads and tag system features
 
 ### 🚧 Planned Documentation
 

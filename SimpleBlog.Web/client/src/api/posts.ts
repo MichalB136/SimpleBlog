@@ -37,4 +37,6 @@ export const postsApi = {
   getComments: (id: string) => apiClient.get<Comment[]>(`/posts/${id}/comments`),
   addComment: (postId: string, request: CreateCommentRequest) =>
     apiClient.post<Comment>(`/posts/${postId}/comments`, request),
+  assignTags: (postId: string, tagIds: string[]) =>
+    apiClient.put<Post>(`/posts/${postId}/tags`, { tagIds }),
 };

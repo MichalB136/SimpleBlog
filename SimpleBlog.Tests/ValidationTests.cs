@@ -214,8 +214,9 @@ public sealed class ValidationTests
             {
                 new(commentId, postId, "Commenter", "Comment text", DateTimeOffset.UtcNow)
             },
-            null,
-            false
+            null!,
+            false,
+            []
         );
 
         // Assert
@@ -236,7 +237,8 @@ public sealed class ValidationTests
             null,
             "Category",
             100,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            []
         );
 
         // Act

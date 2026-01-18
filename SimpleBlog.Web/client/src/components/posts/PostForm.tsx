@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import type { Post } from '@/types/post';
+import { TagSelector } from '@/components/common/TagSelector';
 import { ImageManager } from './ImageManager';
 
 interface PostFormProps {
   post?: Post | null;
-  onSubmit: (data: { title: string; content: string; author: string }, files?: File[]) => Promise<void>;
+  onSubmit: (
+    data: { title: string; content: string; author: string },
+    files?: File[],
+    tagIds?: string[]
+  ) => Promise<void>;
   onCancel: () => void;
   onAddImage?: (postId: string, file: File) => Promise<void>;
   onRemoveImage?: (postId: string, imageUrl: string) => Promise<void>;
@@ -18,16 +23,19 @@ export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (post) {
       setTitle(post.title);
       setContent(post.content);
       setAuthor(post.author);
+      setSelectedTagIds(post.tags?.map((t) => t.id) ?? []);
     } else {
       setTitle('');
       setContent('');
       setAuthor('');
+      setSelectedTagIds([]);
     }
     setError('');
     
@@ -82,13 +90,14 @@ export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }
 
     try {
       if (post) {
-        // Editing existing post - use old method (no files)
-        await onSubmit({ title: title.trim(), content: content.trim(), author: author.trim() });
+        // Editing existing post - send selected tags
+        await onSubmit({ title: title.trim(), content: content.trim(), author: author.trim() }, undefined, selectedTagIds);
       } else {
-        // Creating new post - include files
+        // Creating new post - include files + tags
         await onSubmit(
           { title: title.trim(), content: content.trim(), author: author.trim() },
-          selectedFiles.length > 0 ? selectedFiles : undefined
+          selectedFiles.length > 0 ? selectedFiles : undefined,
+          selectedTagIds
         );
       }
       
@@ -153,6 +162,16 @@ export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }
                     required
                     disabled={isSubmitting}
                   ></textarea>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Tagi (style, materiały, okazje)</label>
+                  <TagSelector
+                    selectedTagIds={selectedTagIds}
+                    onChange={setSelectedTagIds}
+                    disabled={isSubmitting}
+                  />
+                  <small className="text-muted">Wybierz tagi, aby łatwiej filtrować artykuły o modzie.</small>
                 </div>
                 
                 {!post && (

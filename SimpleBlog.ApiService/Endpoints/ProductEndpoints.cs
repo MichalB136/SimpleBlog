@@ -18,6 +18,7 @@ public static class ProductEndpoints
         products.MapPost(endpointConfig.Products.Create, Create).RequireAuthorization();
         products.MapPut(endpointConfig.Products.Update, Update).RequireAuthorization();
         products.MapDelete(endpointConfig.Products.Delete, Delete).RequireAuthorization();
+        products.MapPut("/{id:guid}/tags", AssignTags).RequireAuthorization();
     }
 
     private static async Task<IResult> GetAll(
@@ -118,5 +119,38 @@ public static class ProductEndpoints
         
         logger.LogInformation("Product deleted: {ProductId}", id);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> AssignTags(
+        Guid id,
+        AssignTagsRequest request,
+        IProductRepository repository,
+        HttpContext context,
+        ILogger<Program> logger,
+        AuthorizationConfiguration authConfig)
+    {
+        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        {
+            logger.LogWarning("User {UserName} attempted to assign tags to product without Admin role", 
+                context.User.Identity?.Name);
+            return Results.Forbid();
+        }
+
+        try
+        {
+            var product = await repository.AssignTagsAsync(id, request.TagIds);
+            if (product is null)
+                return Results.NotFound($"Product with ID {id} not found");
+
+            logger.LogInformation("Tags assigned to product {ProductId} by {UserName}: {TagCount} tags", 
+                id, context.User.Identity?.Name, request.TagIds.Count);
+            
+            return Results.Ok(product);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error assigning tags to product {ProductId}", id);
+            return Results.Problem("Failed to assign tags to product");
+        }
     }
 }

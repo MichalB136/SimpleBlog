@@ -20,66 +20,66 @@ public static class ShopSeeder
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Kurs .NET Aspire",
-                Description = "Kompletny kurs video wprowadzający do .NET Aspire. Nauczysz się budować aplikacje rozproszone.",
-                Price = 199.99m,
-                Category = "Edukacja",
-                Stock = 100,
+                Name = "Sukienka lniana 'Letnia Rosa'",
+                Description = "Zwiewna sukienka midi z naturalnego lnu. Idealna na letnie dni. Pastelowy róż podkreśla kobiecość. Rozmiar uniwersalny (S-M). Wymiary: długość 110cm, obwód w talii 70-85cm.",
+                Price = 289.99m,
+                Category = "Sukienki",
+                Stock = 3,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-15)
             },
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Książka: PostgreSQL dla programistów",
-                Description = "Praktyczny przewodnik po PostgreSQL. Od podstaw do zaawansowanych technik optymalizacji.",
-                Price = 89.99m,
-                Category = "Książki",
-                Stock = 50,
+                Name = "Koszulka oversize 'Vintage Dreams'",
+                Description = "100% bawełna organiczna, oversizowy krój. Ręcznie malowany nadruk w stylu vintage. Unisex. Dostępne rozmiary: M, L, XL.",
+                Price = 129.99m,
+                Category = "Koszulki",
+                Stock = 8,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-14)
             },
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Konsultacja techniczna - 1h",
-                Description = "Godzinna konsultacja techniczna dotycząca architektury aplikacji, baz danych lub .NET.",
-                Price = 250.00m,
-                Category = "Usługi",
-                Stock = 10,
+                Name = "Spodnie lniane 'Boho Wide'",
+                Description = "Szerokie spodnie z lnu w stylu boho. Wysoki stan, gumka w pasie. Naturalna beżowa kolorystyka. Rozmiary: S, M, L.",
+                Price = 249.99m,
+                Category = "Spodnie",
+                Stock = 5,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-13)
             },
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Docker dla developerów",
-                Description = "Kurs online nauczający konteneryzacji aplikacji z użyciem Docker i docker-compose.",
-                Price = 149.99m,
-                Category = "Edukacja",
-                Stock = 100,
+                Name = "Tunika bawełniana 'Minimalist'",
+                Description = "Minimalistyczna tunika z organicznej bawełny. Luźny krój, idealna do letnich stylizacji. Biała, rozmiar uniwersalny.",
+                Price = 179.99m,
+                Category = "Tuniki",
+                Stock = 6,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-10)
             },
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Code Review - pakiet 3 sesji",
-                Description = "Trzy sesje code review Twojego projektu z ekspertem. Analiza kodu, best practices, sugestie ulepszeń.",
-                Price = 599.99m,
-                Category = "Usługi",
-                Stock = 5,
+                Name = "Torba na ramię 'Eco Shopper'",
+                Description = "Ręcznie szyta torba z bawełny organicznej. Wzmocnione uchwyty, podszewka z lnu. Wymiary: 40x35cm. Idealna na zakupy lub jako torba plażowa.",
+                Price = 89.99m,
+                Category = "Akcesoria",
+                Stock = 12,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-7)
             },
             new ProductEntity
             {
                 Id = Guid.NewGuid(),
-                Name = "Entity Framework Core - ebook",
-                Description = "E-book w formacie PDF omawiający EF Core od podstaw. Zawiera praktyczne przykłady i wzorce.",
-                Price = 49.99m,
-                Category = "Książki",
-                Stock = 1000,
+                Name = "Sukienka maxi 'Bohemian Soul'",
+                Description = "Długa sukienka w stylu boho. Bawełna + len. Haftowane detale ręcznie wykonane. Pasek w talii. Rozmiary: S, M, L.",
+                Price = 399.99m,
+                Category = "Sukienki",
+                Stock = 2,
                 ImageUrl = null,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-5)
             }

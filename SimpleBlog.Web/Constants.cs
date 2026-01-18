@@ -32,4 +32,7 @@ internal static class EndpointPaths
     // Site Settings
     public const string SiteSettings = "/site-settings";
     public const string SiteSettingsLogo = "/site-settings/logo";
+
+    // Tags
+    public const string Tags = "/tags";
 }

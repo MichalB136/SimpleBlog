@@ -25,9 +25,12 @@ export function useProducts() {
   }, [refresh]);
 
   const create = useCallback(
-    async (payload: any) => {
+    async (payload: any, tagIds?: string[]) => {
       try {
-        await productsApi.create(payload);
+        const created = await productsApi.create(payload);
+        if (tagIds && tagIds.length > 0) {
+          await productsApi.assignTags(created.id, tagIds);
+        }
         await refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create product');
@@ -38,9 +41,12 @@ export function useProducts() {
   );
 
   const update = useCallback(
-    async (id: string, payload: any) => {
+    async (id: string, payload: any, tagIds?: string[]) => {
       try {
         await productsApi.update(id, payload);
+        if (tagIds) {
+          await productsApi.assignTags(id, tagIds);
+        }
         await refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to update product');

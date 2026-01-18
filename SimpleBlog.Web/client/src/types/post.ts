@@ -7,6 +7,15 @@ export interface Post {
   imageUrls: string[];
   isPinned: boolean;
   comments?: Comment[];
+  tags?: Tag[];
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+  color?: string;
+  createdAt: string;
 }
 
 export interface PaginatedResponse<T> {

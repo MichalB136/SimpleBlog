@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Post } from '@/types/post';
+import { TagBadges } from '@/components/common/TagSelector';
 import { CommentForm } from './CommentForm';
 
 interface PostListProps {
@@ -59,6 +60,11 @@ export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTog
                     <small className="text-muted">
                       <i className="bi bi-person me-1"></i>{post.author || 'Anon'}
                     </small>
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="mt-2">
+                        <TagBadges tags={post.tags} />
+                      </div>
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="btn-group">
@@ -152,6 +158,11 @@ export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTog
                           alt={`${selectedPost.title} - zdjęcie ${index + 1}`}
                         />
                       ))}
+                    </div>
+                  )}
+                  {selectedPost.tags && selectedPost.tags.length > 0 && (
+                    <div className="mb-3">
+                      <TagBadges tags={selectedPost.tags} />
                     </div>
                   )}
                   <p className="fs-5 lh-lg" style={{ whiteSpace: 'pre-wrap' }}>

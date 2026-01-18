@@ -44,7 +44,7 @@ public sealed class SmtpEmailService(IConfiguration configuration, ILogger<SmtpE
         }
     }
 
-    private string BuildEmailBody(string customerName, Order order)
+    private static string BuildEmailBody(string customerName, Order order)
     {
         var itemsHtml = string.Join("\n", order.Items.Select(item =>
             $"<tr><td>{item.ProductName}</td><td style=\"text-align:right;\">{item.Quantity}</td><td style=\"text-align:right;\">{item.Price:F2} PLN</td><td style=\"text-align:right;\">{(item.Price * item.Quantity):F2} PLN</td></tr>"

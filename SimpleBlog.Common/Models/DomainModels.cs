@@ -1,6 +1,14 @@
 namespace SimpleBlog.Common.Models;
 
 // Domain models
+public record Tag(
+    Guid Id,
+    string Name,
+    string Slug,
+    string? Color,
+    DateTimeOffset CreatedAt
+);
+
 public record Post(
     Guid Id,
     string Title,
@@ -9,7 +17,8 @@ public record Post(
     DateTimeOffset CreatedAt,
     IReadOnlyList<Comment> Comments,
     IReadOnlyList<string> ImageUrls,
-    bool IsPinned
+    bool IsPinned,
+    IReadOnlyList<Tag> Tags
 );
 
 public record Comment(
@@ -35,7 +44,8 @@ public record Product(
     string? ImageUrl,
     string Category,
     int Stock,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<Tag> Tags
 );
 
 public record Order(

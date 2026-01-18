@@ -63,59 +63,21 @@ builder.Services.AddScoped<IUserRepository, IdentityUserRepository>();
 
 // Configure Cloudinary (optional - for image uploads)
 // Supports CLOUDINARY_URL or individual settings (CloudName, ApiKey, ApiSecret)
-var cloudinaryUrl = Environment.GetEnvironmentVariable("CLOUDINARY_URL");
-Cloudinary? cloudinary = null;
-string? cloudinaryLogMessage = null;
-bool cloudinaryConfigured = false;
-
-if (!string.IsNullOrEmpty(cloudinaryUrl))
-{
-    // Use CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
-    cloudinary = new Cloudinary(cloudinaryUrl);
-    cloudinary.Api.Secure = true; // Use HTTPS URLs
-    builder.Services.AddSingleton(cloudinary);
-    builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
-    cloudinaryLogMessage = "Cloudinary configured from CLOUDINARY_URL";
-    cloudinaryConfigured = true;
-}
-else
-{
-    // Fallback to individual settings
-    var cloudName = builder.Configuration["Cloudinary:CloudName"];
-    var apiKey = builder.Configuration["Cloudinary:ApiKey"];
-    var apiSecret = builder.Configuration["Cloudinary:ApiSecret"];
-
-    if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
-    {
-        var account = new Account(cloudName, apiKey, apiSecret);
-        cloudinary = new Cloudinary(account);
-        cloudinary.Api.Secure = true; // Use HTTPS URLs
-        builder.Services.AddSingleton(cloudinary);
-        builder.Services.AddScoped<IImageStorageService, CloudinaryStorageService>();
-        cloudinaryLogMessage = $"Cloudinary configured with CloudName: {cloudName}";
-        cloudinaryConfigured = true;
-    }
-    else
-    {
-        cloudinaryLogMessage = "Cloudinary not configured. Image upload features will not be available. " +
-            "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +
-            "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret";
-    }
-}
+var cloudinarySetup = CloudinarySetup.Configure(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
 // Log Cloudinary configuration status after app is built
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-if (cloudinaryLogMessage is not null)
+if (cloudinarySetup.Message is not null)
 {
-    if (cloudinaryConfigured)
+    if (cloudinarySetup.Configured)
     {
-        logger.LogInformation("{Message}", cloudinaryLogMessage);
+        logger.LogInformation("{Message}", cloudinarySetup.Message);
     }
     else
     {
-        logger.LogWarning("{Message}", cloudinaryLogMessage);
+        logger.LogWarning("{Message}", cloudinarySetup.Message);
     }
 }
 
@@ -157,6 +119,7 @@ app.MapAboutMeEndpoints();
 app.MapProductEndpoints();
 app.MapOrderEndpoints();
 app.MapSiteSettingsEndpoints();
+app.MapTagEndpoints();
 
 app.MapDefaultEndpoints();
 

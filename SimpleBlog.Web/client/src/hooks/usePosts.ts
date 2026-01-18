@@ -34,9 +34,12 @@ export function usePosts() {
   }, [refresh]);
 
   const create = useCallback(
-    async (payload: any, files?: File[]) => {
+    async (payload: any, files?: File[], tagIds?: string[]) => {
       try {
-        await postsApi.create(payload, files);
+        const created = await postsApi.create(payload, files);
+        if (tagIds && tagIds.length > 0) {
+          await postsApi.assignTags(created.id, tagIds);
+        }
         await refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create post');
@@ -47,9 +50,12 @@ export function usePosts() {
   );
 
   const update = useCallback(
-    async (id: string, payload: any) => {
+    async (id: string, payload: any, tagIds?: string[]) => {
       try {
-        const updated = await postsApi.update(id, payload);
+        let updated = await postsApi.update(id, payload);
+        if (tagIds) {
+          updated = await postsApi.assignTags(id, tagIds);
+        }
         setPosts((prev) => sortPosts(prev.map((p) => (p.id === id ? updated : p))));
         return updated;
       } catch (err) {

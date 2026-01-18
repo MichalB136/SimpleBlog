@@ -11,6 +11,8 @@ public class ShopDbContext : DbContext
     public DbSet<ProductEntity> Products { get; set; } = null!;
     public DbSet<OrderEntity> Orders { get; set; } = null!;
     public DbSet<OrderItemEntity> OrderItems { get; set; } = null!;
+    public DbSet<TagEntity> Tags { get; set; } = null!;
+    public DbSet<ProductTagEntity> ProductTags { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +49,24 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.ProductName).IsRequired();
             entity.Property(e => e.Price).HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.Quantity).IsRequired();
+        });
+
+        modelBuilder.Entity<TagEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Slug).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Color).HasMaxLength(7);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductTagEntity>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.TagId });
+            entity.HasOne(e => e.Product).WithMany(p => p.ProductTags).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Tag).WithMany(t => t.ProductTags).HasForeignKey(e => e.TagId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

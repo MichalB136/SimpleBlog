@@ -31,6 +31,21 @@ public record UpdateAboutMeRequest(
     string Content
 );
 
+// Tag DTOs
+public record CreateTagRequest(
+    string Name,
+    string? Color
+);
+
+public record UpdateTagRequest(
+    string? Name,
+    string? Color
+);
+
+public record AssignTagsRequest(
+    List<Guid> TagIds
+);
+
 // Product DTOs
 public record CreateProductRequest(
     string Name,

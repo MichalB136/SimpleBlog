@@ -28,12 +28,13 @@ function AppContent() {
 
   const handlePostSubmit = async (
     data: { title: string; content: string; author: string },
-    files?: File[]
+    files?: File[],
+    tagIds?: string[]
   ) => {
     if (editingPost) {
-      await update(editingPost.id, data);
+      await update(editingPost.id, data, tagIds);
     } else {
-      await create(data, files);
+      await create(data, files, tagIds);
     }
     setShowPostForm(false);
     setEditingPost(null);
@@ -103,7 +104,7 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-vh-100 d-flex flex-column">
-        <Header title="SimpleBlog × Aspire" subtitle="Prosty blog i sklep" />
+        <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
         <div className="container my-4">
           <Routes>
             <Route path="/register" element={
@@ -151,7 +152,7 @@ function AppContent() {
         <footer className="bg-light py-4 mt-5 border-top">
           <div className="container text-center text-muted">
             <p className="mb-0">
-              SimpleBlog × Aspire &copy; 2024 | Powered by ASP.NET 9 & Vite React
+              SimpleBlog - Ręcznie Robione Ubrania &copy; 2024
             </p>
           </div>
         </footer>
@@ -161,7 +162,7 @@ function AppContent() {
 
   return (
     <div className="min-vh-100 d-flex flex-column">
-      <Header title="SimpleBlog × Aspire" subtitle="Prosty blog i sklep" />
+      <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
       <div className="container-fluid flex-grow-1 d-flex flex-column">
         <Navigation onLogout={handleLogout} />
         <div className="flex-grow-1">
@@ -209,7 +210,7 @@ function AppContent() {
       <footer className="bg-light py-4 mt-5 border-top">
         <div className="container text-center text-muted">
           <p className="mb-0">
-            SimpleBlog × Aspire &copy; 2024 | Powered by ASP.NET 9 & Vite React
+                  SimpleBlog - Ręcznie Robione Ubrania &copy; 2024
           </p>
         </div>
       </footer>

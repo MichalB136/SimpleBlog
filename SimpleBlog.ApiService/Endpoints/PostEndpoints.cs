@@ -30,6 +30,8 @@ public static class PostEndpoints
             .DisableAntiforgery();
         posts.MapDelete("/{id:guid}/images", RemoveImageFromPost)
             .RequireAuthorization();
+        posts.MapPut("/{id:guid}/tags", AssignTags)
+            .RequireAuthorization();
     }
 
     private static async Task<IResult> GetAll(
@@ -429,7 +431,35 @@ public static class PostEndpoints
         }
     }
 
+    private static async Task<IResult> AssignTags(
+        Guid id,
+        AssignTagsRequest request,
+        IPostRepository repository,
+        IImageStorageService imageStorage,
+        HttpContext context,
+        ILogger<Program> logger)
+    {
+        try
+        {
+            var post = await repository.AssignTagsAsync(id, request.TagIds);
+            if (post is null)
+                return Results.NotFound($"Post with ID {id} not found");
+
+            logger.LogInformation("Tags assigned to post {PostId} by {UserName}: {TagCount} tags", 
+                id, context.User.Identity?.Name, request.TagIds.Count);
+            
+            var postWithSignedUrls = GenerateSignedUrlsForPost(post, imageStorage);
+            return Results.Ok(postWithSignedUrls);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error assigning tags to post {PostId}", id);
+            return Results.Problem("Failed to assign tags to post");
+        }
+    }
+
     private static Post GenerateSignedUrlsForPost(Post post, IImageStorageService imageStorage)
+
     {
         if (post.ImageUrls.Count == 0)
             return post;
