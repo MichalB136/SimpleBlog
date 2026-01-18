@@ -26,17 +26,18 @@ jobs:
           # Disable built-in NuGet caching because it requires committed packages.lock.json
 
       - name: Install SonarScanner for .NET
-        run: dotnet tool update --global dotnet-sonarscanner
+        run: |
+          dotnet tool update --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-coverage
 
       - name: Add .NET tools to PATH
         run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: SonarQube Begin
+      - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-
           dotnet sonarscanner begin \
             /k:"MichalB136_SimpleBlog" \
             /n:"SimpleBlog" \
@@ -45,25 +46,13 @@ jobs:
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
 
-      - name: Restore
-        run: dotnet restore SimpleBlog.sln
+          dotnet build SimpleBlog.sln --no-restore
+          dotnet restore SimpleBlog.sln
 
-      - name: Build
-        run: dotnet build SimpleBlog.sln --no-restore
+          dotnet-coverage collect 'dotnet test' -f xml  -o 'coverage.xml'
 
-      - name: Test with coverage
-        run: |
-          dotnet test SimpleBlog.Tests/SimpleBlog.Tests.csproj \
-            --no-build \
-            --logger "trx;LogFileName=test_results.trx" \
-            /p:CollectCoverage=true \
-            /p:CoverletOutput=TestResults/coverage.opencover.xml \
-            /p:CoverletOutputFormat=opencover
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
 
-      - name: SonarQube End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
         
       - name: Quality Gate (optional)
         if: always()
