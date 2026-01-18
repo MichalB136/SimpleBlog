@@ -12,7 +12,7 @@ public static class WebAppSetup
     {
         if (app.Environment.IsDevelopment())
         {
-            var viteHttpClient = new HttpClient
+            using var viteHttpClient = new HttpClient
             {
                 BaseAddress = new Uri("http://localhost:5173"),
                 Timeout = TimeSpan.FromSeconds(30)
@@ -34,17 +34,15 @@ public static class WebAppSetup
                     var requestPath = context.Request.Path.Value ?? "/";
                     var requestUrl = $"{requestPath}{context.Request.QueryString}";
 
-                    var proxyRequest = new HttpRequestMessage(
+                    using var proxyRequest = new HttpRequestMessage(
                         new HttpMethod(context.Request.Method),
                         requestUrl);
 
-                    // Copy headers
-                    foreach (var header in context.Request.Headers)
+                    // Copy headers (excluding Host header)
+                    foreach (var header in context.Request.Headers
+                        .Where(h => !h.Key.Equals("Host", StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (!header.Key.Equals("Host", StringComparison.OrdinalIgnoreCase))
-                        {
-                            proxyRequest.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
-                        }
+                        proxyRequest.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
                     }
 
                     // Copy body if present

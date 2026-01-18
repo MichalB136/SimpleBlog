@@ -285,7 +285,7 @@ public sealed class EfPostRepository(
             .ToList();
 
         // Deserialize ImageUrls JSON array (handle empty string as empty array)
-        var imageUrls = string.IsNullOrWhiteSpace(entity.ImageUrls) || entity.ImageUrls == ""
+        var imageUrls = string.IsNullOrWhiteSpace(entity.ImageUrls)
             ? []
             : System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.ImageUrls) ?? [];
 

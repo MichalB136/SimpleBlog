@@ -11,8 +11,10 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Note: Tags table is created by BlogDbContext migration
-            // Both contexts share the same Tags table in the database
+            // Note: Tags table is shared between BlogDbContext and ShopDbContext.
+            // It is created by BlogDbContext migration (20260118141436_AddTagsSupport).
+            // This migration only creates the ProductTags junction table.
+            // Ensure BlogDbContext migrations run first to create Tags table.
             
             migrationBuilder.CreateTable(
                 name: "ProductTags",

@@ -43,7 +43,12 @@ export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }
     previewUrls.forEach(url => URL.revokeObjectURL(url));
     setSelectedFiles([]);
     setPreviewUrls([]);
-  }, [post]);
+
+    // Cleanup on unmount
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [post, previewUrls]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

@@ -75,18 +75,10 @@ public sealed class CloudinaryStorageService(
 
         try
         {
-            string publicId;
-
-            // Check if this is our internal format (cloudinary://public_id)
-            if (imageUrl.StartsWith("cloudinary://"))
-            {
-                publicId = imageUrl["cloudinary://".Length..];
-            }
-            else
-            {
-                // Legacy format - extract from full URL
-                publicId = ExtractPublicIdFromUrl(imageUrl) ?? string.Empty;
-            }
+            // Check if this is our internal format (cloudinary://public_id) or legacy format
+            var publicId = imageUrl.StartsWith("cloudinary://")
+                ? imageUrl["cloudinary://".Length..]
+                : ExtractPublicIdFromUrl(imageUrl) ?? string.Empty;
             
             if (string.IsNullOrEmpty(publicId))
             {

@@ -102,11 +102,8 @@ public static class PostEndpoints
                 const long maxFileSize = 10 * 1024 * 1024; // 10 MB
                 var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
                 
-                foreach (var file in files)
+                foreach (var file in files.Where(f => f.Length > 0))
                 {
-                    if (file.Length == 0)
-                        continue;
-                        
                     if (file.Length > maxFileSize)
                     {
                         logger.LogWarning("File {FileName} exceeds size limit: {Size} bytes", file.FileName, file.Length);
@@ -146,11 +143,8 @@ public static class PostEndpoints
             if (files is not null && files.Count > 0)
             {
                 var uploadedCount = 0;
-                foreach (var file in files)
+                foreach (var file in files.Where(f => f.Length > 0))
                 {
-                    if (file.Length == 0)
-                        continue;
-                        
                     try
                     {
                         await using var stream = file.OpenReadStream();
