@@ -12,15 +12,13 @@ public record RegisterResponse(bool Success, string? Message);
 public record CreatePostRequest(
     string Title,
     string Content,
-    string? Author,
-    string? ImageUrl
+    string? Author
 );
 
 public record UpdatePostRequest(
     string? Title,
     string? Content,
-    string? Author,
-    string? ImageUrl
+    string? Author
 );
 
 public record CreateCommentRequest(

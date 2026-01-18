@@ -22,7 +22,7 @@ public static class BlogSeeder
                 Content = "To jest pierwszy post na naszym blogu. SimpleBlog to przykładowa aplikacja demonstrująca możliwości .NET Aspire z PostgreSQL.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-10),
-                ImageUrl = null,
+                ImageUrls = "[]",
                 Comments = new List<CommentEntity>
                 {
                     new()
@@ -48,7 +48,7 @@ public static class BlogSeeder
                 Content = ".NET Aspire to framework do budowania aplikacji rozproszonych. Oferuje gotowe komponenty do orkiestracji, telemetrii i zarządzania zasobami.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-7),
-                ImageUrl = null,
+                ImageUrls = "[]",
                 Comments = new List<CommentEntity>
                 {
                     new()
@@ -67,7 +67,7 @@ public static class BlogSeeder
                 Content = "PostgreSQL to potężny otwartoźródłowy system baz danych. W SimpleBlog używamy go do przechowywania postów, komentarzy i danych sklepu.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-5),
-                ImageUrl = null,
+                ImageUrls = "[]",
                 Comments = new List<CommentEntity>()
             },
             new PostEntity
@@ -77,7 +77,7 @@ public static class BlogSeeder
                 Content = "EF Core Migrations pozwala na automatyczne zarządzanie schematem bazy danych. Nasza aplikacja automatycznie aplikuje migracje przy starcie.",
                 Author = "admin",
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-3),
-                ImageUrl = null,
+                ImageUrls = "[]",
                 Comments = new List<CommentEntity>
                 {
                     new()
@@ -103,7 +103,7 @@ public static class BlogSeeder
                 Content = "Docker pozwala na łatwe uruchamianie PostgreSQL lokalnie. SimpleBlog używa docker-compose do zarządzania infrastrukturą.",
                     Author = SeedDataConstants.AdminUsername,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-                ImageUrl = null,
+                ImageUrls = "[]",
                 Comments = new List<CommentEntity>()
             }
         };
@@ -129,6 +129,24 @@ public static class BlogSeeder
             await db.SaveChangesAsync();
 
             logger.LogInformation("Seeded AboutMe content");
+        }
+
+        // Seed SiteSettings if missing
+        if (!await db.SiteSettings.AnyAsync())
+        {
+            var settings = new SiteSettingsEntity
+            {
+                Id = Guid.NewGuid(),
+                Theme = "light",
+                LogoUrl = null,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                UpdatedBy = SeedDataConstants.SystemUsername
+            };
+
+            await db.SiteSettings.AddAsync(settings);
+            await db.SaveChangesAsync();
+
+            logger.LogInformation("Seeded SiteSettings with default theme");
         }
     }
 }

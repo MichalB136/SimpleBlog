@@ -18,9 +18,5 @@ public sealed class CreatePostRequestValidator : AbstractValidator<CreatePostReq
         RuleFor(x => x.Author)
             .MaximumLength(100).WithMessage("Author name cannot exceed 100 characters")
             .When(x => !string.IsNullOrEmpty(x.Author));
-
-        RuleFor(x => x.ImageUrl)
-            .MaximumLength(500).WithMessage("Image URL cannot exceed 500 characters")
-            .When(x => !string.IsNullOrEmpty(x.ImageUrl));
     }
 }

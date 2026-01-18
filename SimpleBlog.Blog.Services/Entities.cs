@@ -7,7 +7,7 @@ public class PostEntity
     public string Content { get; set; } = null!;
     public string Author { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
-    public string? ImageUrl { get; set; }
+    public string ImageUrls { get; set; } = "[]"; // JSON array of image URLs
     public bool IsPinned { get; set; }
 
     public List<CommentEntity> Comments { get; set; } = new();

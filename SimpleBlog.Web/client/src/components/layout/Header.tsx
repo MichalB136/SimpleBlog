@@ -13,7 +13,7 @@ export function Header({ title, subtitle }: Readonly<HeaderProps>) {
       {settings?.logoUrl && (
         <div className="mb-3">
           <img
-            src={settings.logoUrl}
+            src={`${settings.logoUrl}?t=${settings.updatedAt}`}
             alt="Logo"
             style={{ maxHeight: '120px', maxWidth: '400px', objectFit: 'contain' }}
             className="img-fluid"

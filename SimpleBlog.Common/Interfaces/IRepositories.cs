@@ -12,6 +12,10 @@ public interface IPostRepository
     Task<IReadOnlyList<Comment>?> GetCommentsAsync(Guid postId);
     Task<Comment?> AddCommentAsync(Guid postId, CreateCommentRequest request);
     Task<Post?> SetPinnedAsync(Guid id, bool isPinned);
+    
+    // Image management
+    Task<Post?> AddImageAsync(Guid postId, string imageUrl);
+    Task<Post?> RemoveImageAsync(Guid postId, string imageUrl);
 }
 
 public interface IAboutMeRepository

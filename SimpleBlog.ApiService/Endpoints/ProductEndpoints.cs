@@ -42,7 +42,7 @@ public static class ProductEndpoints
         EndpointConfiguration endpointConfig,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForProductCreate && !context.User.IsInRole(SeedDataConstants.AdminUsername))
+        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("User {UserName} attempted to create product without Admin role", context.User.Identity?.Name);
             return Results.Forbid();
@@ -71,7 +71,7 @@ public static class ProductEndpoints
         ILogger<Program> logger,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminUsername))
+        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("Unauthorized update attempt for product: {ProductId}", id);
             return Results.Forbid();
@@ -103,7 +103,7 @@ public static class ProductEndpoints
         ILogger<Program> logger,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForProductDelete && !context.User.IsInRole(SeedDataConstants.AdminUsername))
+        if (authConfig.RequireAdminForProductDelete && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("Unauthorized delete attempt for product: {ProductId}", id);
             return Results.Forbid();

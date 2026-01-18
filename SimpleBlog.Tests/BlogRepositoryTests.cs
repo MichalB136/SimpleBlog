@@ -107,8 +107,7 @@ public sealed class BlogRepositoryTests
         var request = new CreatePostRequest(
             "New Post",
             "New Content",
-            "New Author",
-            "https://example.com/image.jpg"
+            "New Author"
         );
 
         // Act
@@ -120,7 +119,7 @@ public sealed class BlogRepositoryTests
         Assert.Equal("New Post", result.Title);
         Assert.Equal("New Content", result.Content);
         Assert.Equal("New Author", result.Author);
-        Assert.Equal("https://example.com/image.jpg", result.ImageUrl);
+        Assert.Empty(result.ImageUrls);
         
         // Verify it's in the database
         var savedPost = context.Posts.Find(result.Id);
@@ -151,8 +150,7 @@ public sealed class BlogRepositoryTests
         var updateRequest = new UpdatePostRequest(
             "Updated Title",
             "Updated Content",
-            "Updated Author",
-            "https://example.com/updated.jpg"
+            "Updated Author"
         );
 
         // Act
@@ -163,7 +161,6 @@ public sealed class BlogRepositoryTests
         Assert.Equal("Updated Title", result.Title);
         Assert.Equal("Updated Content", result.Content);
         Assert.Equal("Updated Author", result.Author);
-        Assert.Equal("https://example.com/updated.jpg", result.ImageUrl);
         
         // Verify in database
         var updatedPost = context.Posts.Find(postId);
@@ -178,7 +175,7 @@ public sealed class BlogRepositoryTests
         await using var context = CreateInMemoryContext();
         var repository = new EfPostRepository(context, new NoOpOperationLogger());
         
-        var updateRequest = new UpdatePostRequest("Title", "Content", "Author", null);
+        var updateRequest = new UpdatePostRequest("Title", "Content", "Author");
 
         // Act
         var result = await repository.UpdateAsync(Guid.NewGuid(), updateRequest);
@@ -188,7 +185,7 @@ public sealed class BlogRepositoryTests
     }
 
     [Fact]
-    public async Task UpdateAsync_NullImageUrl_DoesNotClearExistingImage()
+    public async Task UpdateAsync_PartialUpdate_PreservesOtherFields()
     {
         await using var context = CreateInMemoryContext();
         var repository = new EfPostRepository(context, new NoOpOperationLogger());
@@ -200,19 +197,19 @@ public sealed class BlogRepositoryTests
             Title = "Title",
             Content = "Content",
             Author = "Author",
-            ImageUrl = "https://example.com/original.jpg",
+            ImageUrls = "[]",
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         context.Posts.Add(post);
         context.SaveChanges();
 
-        var updateRequest = new UpdatePostRequest("Updated", "Updated", "Author", null);
+        var updateRequest = new UpdatePostRequest("Updated", "Updated", "Author");
 
         var result = await repository.UpdateAsync(postId, updateRequest);
 
         Assert.NotNull(result);
-        Assert.Equal("https://example.com/original.jpg", result.ImageUrl); // current behavior keeps image when null supplied
+        Assert.Empty(result.ImageUrls); // Images managed separately
     }
 
     [Fact]

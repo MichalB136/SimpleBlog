@@ -4,7 +4,7 @@ export interface Post {
   content: string;
   author: string;
   createdAt: string;
-  imageUrl?: string;
+  imageUrls: string[];
   isPinned: boolean;
   comments?: Comment[];
 }
@@ -23,14 +23,12 @@ export interface CreatePostRequest {
   title: string;
   content: string;
   author: string;
-  imageUrl?: string;
 }
 
 export interface UpdatePostRequest {
   title: string;
   content: string;
   author: string;
-  imageUrl?: string;
 }
 
 export interface Comment {

@@ -1,100 +1,253 @@
-import React, { useState } from 'react';
-// Unused type import removed
+import React, { useState, useEffect } from 'react';
+import type { Post } from '@/types/post';
+import { ImageManager } from './ImageManager';
 
 interface PostFormProps {
-  onCreated?: () => void;
-  isSubmitting?: boolean;
+  post?: Post | null;
+  onSubmit: (data: { title: string; content: string; author: string }, files?: File[]) => Promise<void>;
+  onCancel: () => void;
+  onAddImage?: (postId: string, file: File) => Promise<void>;
+  onRemoveImage?: (postId: string, imageUrl: string) => Promise<void>;
 }
 
-export function PostForm({ onCreated, isSubmitting = false }: PostFormProps) {
+export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }: PostFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [author, setAuthor] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImageUrl((event.target?.result as string) || '');
-      };
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    if (post) {
+      setTitle(post.title);
+      setContent(post.content);
+      setAuthor(post.author);
+    } else {
+      setTitle('');
+      setContent('');
+      setAuthor('');
     }
-  };
+    setError('');
+    
+    // Cleanup preview URLs
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+  }, [post]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !content.trim()) {
-      setError('Title and content are required');
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validate file size
+    const maxSize = 10 * 1024 * 1024; // 10 MB
+    const invalidFiles = files.filter(f => f.size > maxSize);
+    if (invalidFiles.length > 0) {
+      setError(`Niektóre pliki przekraczają limit 10 MB: ${invalidFiles.map(f => f.name).join(', ')}`);
       return;
     }
-    onCreated?.();
+
+    // Validate file types
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidTypes = files.filter(f => !allowedTypes.includes(f.type));
+    if (invalidTypes.length > 0) {
+      setError(`Niektóre pliki mają nieprawidłowy typ: ${invalidTypes.map(f => f.name).join(', ')}`);
+      return;
+    }
+
+    setSelectedFiles(files);
+    
+    // Create local previews
+    const previews = files.map(file => URL.createObjectURL(file));
+    setPreviewUrls(previews);
+    setError('');
+  };
+
+  const handleRemovePreview = (index: number) => {
+    URL.revokeObjectURL(previewUrls[index]);
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim() || !author.trim()) {
+      setError('Wszystkie pola są wymagane');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      if (post) {
+        // Editing existing post - use old method (no files)
+        await onSubmit({ title: title.trim(), content: content.trim(), author: author.trim() });
+      } else {
+        // Creating new post - include files
+        await onSubmit(
+          { title: title.trim(), content: content.trim(), author: author.trim() },
+          selectedFiles.length > 0 ? selectedFiles : undefined
+        );
+      }
+      
+      // Cleanup previews on success
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Błąd podczas zapisywania posta');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="card shadow mb-4">
-      <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <div>
-          <small className="text-uppercase d-block mb-1">Nowy wpis</small>
-          <h5 className="mb-0">Dodaj notkę</h5>
+    <>
+      <div className="modal-backdrop show"></div>
+      <div className="modal show d-block" tabIndex={-1}>
+        <div className="modal-dialog modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">
+                {post ? 'Edytuj post' : 'Nowy post'}
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={onCancel}
+                disabled={isSubmitting}
+              ></button>
+            </div>
+            <div className="modal-body">
+              <form id="post-form" onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Tytuł *</label>
+                  <input
+                    className="form-control"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Tytuł posta"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Autor *</label>
+                  <input
+                    className="form-control"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    placeholder="Autor posta"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Treść *</label>
+                  <textarea
+                    className="form-control"
+                    rows={8}
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Treść posta..."
+                    required
+                    disabled={isSubmitting}
+                  ></textarea>
+                </div>
+                
+                {!post && (
+                  <div className="mb-3">
+                    <label className="form-label">Zdjęcia (opcjonalne)</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      multiple
+                      onChange={handleFileSelect}
+                      disabled={isSubmitting}
+                    />
+                    <small className="text-muted">
+                      Maksymalnie 10 MB na plik. Formaty: JPEG, PNG, GIF, WebP
+                    </small>
+                    
+                    {previewUrls.length > 0 && (
+                      <div className="mt-3">
+                        <h6>Podgląd ({previewUrls.length} {previewUrls.length === 1 ? 'zdjęcie' : 'zdjęć'}):</h6>
+                        <div className="row g-2">
+                          {previewUrls.map((url, index) => (
+                            <div key={index} className="col-4 position-relative">
+                              <img 
+                                src={url} 
+                                alt={`Podgląd ${index + 1}`} 
+                                className="img-thumbnail w-100" 
+                                style={{ height: '150px', objectFit: 'cover' }}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                onClick={() => handleRemovePreview(index)}
+                                disabled={isSubmitting}
+                                title="Usuń zdjęcie"
+                              >
+                                <i className="bi bi-x"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {error && <div className="alert alert-danger">{error}</div>}
+              </form>
+              
+              {post && onAddImage && onRemoveImage && (
+                <>
+                  <hr className="my-3" />
+                  <ImageManager
+                    post={post}
+                    onAddImage={async (file) => {
+                      await onAddImage(post.id, file);
+                    }}
+                    onRemoveImage={async (imageUrl) => {
+                      await onRemoveImage(post.id, imageUrl);
+                    }}
+                  />
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onCancel}
+                disabled={isSubmitting}
+              >
+                Anuluj
+              </button>
+              <button
+                type="submit"
+                form="post-form"
+                className="btn btn-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Zapisywanie...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-save me-2"></i>
+                    {post ? 'Zapisz zmiany' : 'Utwórz post'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <button type="submit" form="post-form" className="btn btn-light btn-sm" disabled={isSubmitting}>
-          {isSubmitting ? 'Zapisywanie...' : (
-            <>
-              <i className="bi bi-send me-1"></i>Publikuj
-            </>
-          )}
-        </button>
       </div>
-      <div className="card-body">
-        <form id="post-form" onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label className="form-label">Tytuł</label>
-            <input
-              className="form-control"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Mój pierwszy wpis"
-              required
-            />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Autor</label>
-            <input
-              className="form-control"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Twoje imię"
-            />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Treść</label>
-            <textarea
-              className="form-control"
-              rows={5}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Co masz dziś do powiedzenia?"
-              required
-            ></textarea>
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Zdjęcie (opcjonalnie)</label>
-            <input
-              type="file"
-              className="form-control"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {imageUrl && (
-              <img src={imageUrl} className="img-fluid rounded mt-2" style={{ maxHeight: '200px' }} alt="Preview" />
-            )}
-          </div>
-          {error && <div className="alert alert-danger">{error}</div>}
-        </form>
-      </div>
-    </div>
+    </>
   );
 }

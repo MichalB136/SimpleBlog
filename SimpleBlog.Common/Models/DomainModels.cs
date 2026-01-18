@@ -8,7 +8,7 @@ public record Post(
     string Author,
     DateTimeOffset CreatedAt,
     IReadOnlyList<Comment> Comments,
-    string? ImageUrl,
+    IReadOnlyList<string> ImageUrls,
     bool IsPinned
 );
 

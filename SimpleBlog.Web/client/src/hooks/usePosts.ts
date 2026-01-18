@@ -34,9 +34,9 @@ export function usePosts() {
   }, [refresh]);
 
   const create = useCallback(
-    async (payload: any) => {
+    async (payload: any, files?: File[]) => {
       try {
-        await postsApi.create(payload);
+        await postsApi.create(payload, files);
         await refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create post');
@@ -44,6 +44,20 @@ export function usePosts() {
       }
     },
     [refresh]
+  );
+
+  const update = useCallback(
+    async (id: string, payload: any) => {
+      try {
+        const updated = await postsApi.update(id, payload);
+        setPosts((prev) => sortPosts(prev.map((p) => (p.id === id ? updated : p))));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update post');
+        throw err;
+      }
+    },
+    [sortPosts]
   );
 
   const delete_ = useCallback(
@@ -95,5 +109,33 @@ export function usePosts() {
     []
   );
 
-  return { posts, loading, error, refresh, create, delete: delete_, togglePin, addComment, setError };
+  const addImage = useCallback(
+    async (postId: string, file: File) => {
+      try {
+        const updated = await postsApi.addImage(postId, file);
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add image');
+        throw err;
+      }
+    },
+    []
+  );
+
+  const removeImage = useCallback(
+    async (postId: string, imageUrl: string) => {
+      try {
+        const updated = await postsApi.removeImage(postId, imageUrl);
+        setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove image');
+        throw err;
+      }
+    },
+    []
+  );
+
+  return { posts, loading, error, refresh, create, update, delete: delete_, togglePin, addComment, addImage, removeImage, setError };
 }

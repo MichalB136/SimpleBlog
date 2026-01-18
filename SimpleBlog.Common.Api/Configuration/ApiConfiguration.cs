@@ -72,6 +72,7 @@ public class OrdersEndpoints
 public class AuthorizationConfiguration
 {
     public bool RequireAdminForPostCreate { get; set; } = true;
+    public bool RequireAdminForPostUpdate { get; set; } = true;
     public bool RequireAdminForPostDelete { get; set; } = true;
     public bool RequireAdminForProductCreate { get; set; } = true;
     public bool RequireAdminForProductUpdate { get; set; } = true;

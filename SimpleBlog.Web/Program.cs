@@ -150,8 +150,21 @@ api.MapGet("/posts/{id:guid}",
         await ApiProxyHelper.ProxyGetRequest(factory, $"/posts/{id}", logger));
 
 api.MapPost(EndpointPaths.Posts, 
-    async (CreatePostRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Posts, request, context, logger));
+    async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+    {
+        // Check if it's multipart (with files) or JSON
+        if (context.Request.HasFormContentType)
+        {
+            // Multipart - proxy form data (new way with images)
+            return await ApiProxyHelper.ProxyFormDataRequest(factory, EndpointPaths.Posts, context, logger);
+        }
+        else
+        {
+            // JSON - old way (backwards compatibility)
+            var request = await context.Request.ReadFromJsonAsync<CreatePostRequest>();
+            return await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Posts, request, context, logger);
+        }
+    });
 
 api.MapPut("/posts/{id:guid}", 
     async (Guid id, UpdatePostRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
@@ -176,6 +189,14 @@ api.MapPut("/posts/{id:guid}/pin",
 api.MapPut("/posts/{id:guid}/unpin", 
     async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
         await ApiProxyHelper.ProxyPutRequestWithoutBody(factory, $"/posts/{id}/unpin", context, logger));
+
+api.MapPost("/posts/{id:guid}/images", 
+    async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyFormDataRequest(factory, $"/posts/{id}/images", context, logger));
+
+api.MapDelete("/posts/{id:guid}/images", 
+    async (Guid id, string imageUrl, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+        await ApiProxyHelper.ProxyDeleteRequest(factory, $"/posts/{id}/images?imageUrl={Uri.EscapeDataString(imageUrl)}", context, logger));
 
 // Products
 api.MapGet(EndpointPaths.Products, 
@@ -221,25 +242,25 @@ api.MapPut(EndpointPaths.AboutMe,
         await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
 
 // Site Settings
-api.MapGet(SiteSettingsPath,
+api.MapGet(EndpointPaths.SiteSettings,
     async (IHttpClientFactory factory, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyGetRequest(factory, SiteSettingsPath, logger));
+        await ApiProxyHelper.ProxyGetRequest(factory, EndpointPaths.SiteSettings, logger));
 
-api.MapPut(SiteSettingsPath,
+api.MapPut(EndpointPaths.SiteSettings,
     async (SimpleBlog.Common.Models.UpdateSiteSettingsRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyPutRequest(factory, SiteSettingsPath, request, context, logger));
+        await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.SiteSettings, request, context, logger));
 
-api.MapGet($"{SiteSettingsPath}/themes",
+api.MapGet($"{EndpointPaths.SiteSettings}/themes",
     async (IHttpClientFactory factory, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyGetRequest(factory, $"{SiteSettingsPath}/themes", logger));
+        await ApiProxyHelper.ProxyGetRequest(factory, $"{EndpointPaths.SiteSettings}/themes", logger));
 
-api.MapPost(SiteSettingsLogoPath,
+api.MapPost(EndpointPaths.SiteSettingsLogo,
     async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyFormDataRequest(factory, SiteSettingsLogoPath, context, logger));
+        await ApiProxyHelper.ProxyFormDataRequest(factory, EndpointPaths.SiteSettingsLogo, context, logger));
 
-api.MapDelete(SiteSettingsLogoPath,
+api.MapDelete(EndpointPaths.SiteSettingsLogo,
     async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
-        await ApiProxyHelper.ProxyDeleteRequest(factory, SiteSettingsLogoPath, context, logger));
+        await ApiProxyHelper.ProxyDeleteRequest(factory, EndpointPaths.SiteSettingsLogo, context, logger));
 
 // SPA fallback to Vite-built index in dist (production only)
 if (!app.Environment.IsDevelopment())
