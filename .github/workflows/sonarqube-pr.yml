@@ -45,9 +45,9 @@ jobs:
             /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
             /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
-
-          dotnet build SimpleBlog.sln --no-restore
+          
           dotnet restore SimpleBlog.sln
+          dotnet build SimpleBlog.sln --no-restore
 
           dotnet-coverage collect 'dotnet test' -f xml  -o 'coverage.xml'
 
