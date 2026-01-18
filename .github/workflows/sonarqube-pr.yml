@@ -66,9 +66,9 @@ jobs:
         
       - name: Quality Gate (optional)
         if: always()
-        uses: sonarsource/sonarcloud-quality-gate-action@v1.5.0
+        uses: sonarsource/sonarqube-quality-gate-action@v1.2.0
         with:
-          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
+          scanMetadataFile: .sonarqube/out/.sonar/report-task.txt
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
