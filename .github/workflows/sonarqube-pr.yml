@@ -63,18 +63,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
-
-      - name: Show report-task (diagnostic)
-        if: always()
-        run: |
-          ls -la .sonarqube/out/.sonar || true
-          cat .sonarqube/out/.sonar/report-task.txt || true
-
+        
       - name: Quality Gate (optional)
-        if: always() && hashFiles('.sonarqube/out/.sonar/report-task.txt') != ''
-        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        if: always()
+        uses: sonarsource/sonarcloud-quality-gate-action@v1.5.0
         with:
-          scanMetadataFile: .sonarqube/out/.sonar/report-task.txt
+          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
