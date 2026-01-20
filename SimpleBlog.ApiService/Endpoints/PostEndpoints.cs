@@ -90,7 +90,7 @@ public static class PostEndpoints
         if (authorizationResult is not null)
             return authorizationResult;
 
-        var (request, files) = await ParseCreatePostRequestAsync(deps.HttpContext, ct, deps.Logger);
+        var (request, files) = await ParseCreatePostRequestAsync(deps.HttpContext, ct);
 
         var fileValidationResult = ValidateUploadedFiles(files, deps.Logger);
         if (fileValidationResult is not null)
@@ -158,8 +158,7 @@ public static class PostEndpoints
 
     private static async Task<(CreatePostRequest request, IFormFileCollection? files)> ParseCreatePostRequestAsync(
         HttpContext context,
-        CancellationToken ct,
-        ILogger<Program> logger)
+        CancellationToken ct)
     {
         if (context.Request.HasFormContentType)
         {

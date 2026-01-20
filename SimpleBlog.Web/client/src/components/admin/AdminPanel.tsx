@@ -47,17 +47,6 @@ export function AdminPanel() {
     [],
   );
 
-  if (user?.role !== 'Admin') {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">
-          <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{' '}
-          Dostęp tylko dla administratorów
-        </div>
-      </div>
-    );
-  }
-
   const handleThemeUpdate = useCallback(async () => {
     if (!selectedTheme) return;
 
@@ -114,7 +103,7 @@ export function AdminPanel() {
   }, [uploadLogo]);
 
   const handleLogoDelete = useCallback(async () => {
-    if (!window.confirm('Czy na pewno chcesz usunąć logo?')) return;
+    if (!globalThis.confirm('Czy na pewno chcesz usunąć logo?')) return;
 
     setUploading(true);
     setMessage(null);
@@ -134,6 +123,17 @@ export function AdminPanel() {
 
   const getThemeDisplayName = useCallback((theme: string) => themeDisplayNameMap[theme] || theme, [themeDisplayNameMap]);
   const getThemeIcon = useCallback((theme: string) => themeIconMap[theme] || 'palette', [themeIconMap]);
+
+  if (user?.role !== 'Admin') {
+    return (
+      <div className="container mt-5">
+        <div className="alert alert-danger">
+          <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{' '}
+          Dostęp tylko dla administratorów
+        </div>
+      </div>
+    );
+  }
 
   const renderAlert = () =>
     message && (
