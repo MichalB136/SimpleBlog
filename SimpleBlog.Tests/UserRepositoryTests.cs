@@ -24,6 +24,10 @@ public sealed class UserRepositoryTests
 
         public Task<(bool Success, string? ErrorMessage)> RegisterAsync(string username, string email, string password)
         {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return Task.FromResult<(bool Success, string? ErrorMessage)>((false, "Username cannot be empty"));
+            }
             if (_users.ContainsKey(username))
             {
                 return Task.FromResult<(bool Success, string? ErrorMessage)>((false, "Username already exists"));
@@ -238,17 +242,14 @@ public sealed class UserRepositoryTests
     {
         // Arrange
         var repository = new TestUserRepository();
+        var emptyUsername = string.IsNullOrWhiteSpace(username) ? "" : username;
 
-        // Act & Assert
-        // This test documents that validation should be done by FluentValidation
-        // at the API level before calling RegisterAsync
-        // The implementation handles null gracefully
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            var (success, errorMessage) = await repository.RegisterAsync(username ?? "", "test@example.com", "Pass123!");
-            // Empty username would be treated as a potential duplicate
-            // Proper validation should prevent this at API level
-        }
+        // Act
+        var (success, errorMessage) = await repository.RegisterAsync(emptyUsername, "test@example.com", "Pass123!");
+
+        // Assert - empty username should be treated as duplicate (empty string exists by default)
+        Assert.False(success);
+        Assert.NotEmpty(errorMessage ?? "");
     }
 
     [Fact]

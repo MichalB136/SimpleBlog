@@ -32,7 +32,7 @@ jobs:
       - name: Add .NET tools to PATH
         run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: SonarQube Scan (with OpenCover)
+      - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -43,28 +43,29 @@ jobs:
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
             /d:sonar.cs.vstest.reportsPaths=**/TestResults/*.trx \
-            /d:sonar.cs.opencover.reportsPaths=coverage.opencover.xml \
+            /d:sonar.coverageReportPaths=coverage/**/coverage.cobertura.xml \
             /d:sonar.verbose=true
 
           dotnet restore SimpleBlog.sln
           dotnet build SimpleBlog.sln --no-restore --no-incremental
 
-          # install coverlet.console and collect coverage with it (more reliable on CI)
-          dotnet tool install --global coverlet.console || true
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-          coverlet "SimpleBlog.Tests/bin/Debug/net9.0/SimpleBlog.Tests.dll" --target "dotnet" --targetargs "test SimpleBlog.Tests --no-build -v minimal" --format opencover --output coverage.opencover.xml
+          # Run tests with code coverage collection
+          dotnet test SimpleBlog.sln \
+            --no-build \
+            --configuration Debug \
+            --logger "trx;LogFileName=TestResults.trx" \
+            --collect:"XPlat Code Coverage;Format=opencover;IncludeTestAssembly=false" \
+            --results-directory=./coverage
 
-          # validate the generated coverage file exists and is XML (contains <coverage)
-          if [ ! -f coverage.opencover.xml ]; then
-            echo "ERROR: coverage.opencover.xml not created" >&2
+          # Check if coverage file was generated
+          if ! find coverage -name "coverage.cobertura.xml" 2>/dev/null | grep -q .; then
+            echo "ERROR: No coverage report found"
+            find coverage -type f || echo "Coverage directory is empty"
             exit 1
           fi
 
-          if ! grep -m1 -E "<(coverage|CoverageSession)" coverage.opencover.xml >/dev/null 2>&1; then
-            echo "ERROR: coverage.opencover.xml missing expected XML root tag (<CoverageSession> or <coverage>)." >&2
-            echo "First 200 bytes:" && head -c 200 coverage.opencover.xml | xxd -g 1 -l 200 || true
-            exit 1
-          fi
+          echo "Coverage report(s) found:"
+          find coverage -name "coverage.cobertura.xml" -exec echo {} \;
 
           dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
 

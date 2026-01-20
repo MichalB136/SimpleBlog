@@ -74,56 +74,20 @@ public static class PostEndpoints
     {
         logger.LogInformation("POST {Endpoint} called by {UserName}", endpointConfig.Posts.Base, context.User.Identity?.Name);
         
-        // Require admin role to create posts
+        // Check authorization
         if (authConfig.RequireAdminForPostCreate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
             return Results.Forbid();
         }
 
-        CreatePostRequest request;
-        IFormFileCollection? files = null;
-
-        // Check if it's multipart (with files) or JSON
-        if (context.Request.HasFormContentType)
-        {
-            // Parse form data
-            var form = await context.Request.ReadFormAsync(ct);
-            var title = form["title"].ToString();
-            var content = form["content"].ToString();
-            var author = form["author"].ToString();
-            files = form.Files;
-            
-            request = new CreatePostRequest(title, content, author);
-            
-            // Validate files if present
-            if (files.Count > 0)
-            {
-                const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-                var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
-                
-                foreach (var file in files.Where(f => f.Length > 0))
-                {
-                    if (file.Length > maxFileSize)
-                    {
-                        logger.LogWarning("File {FileName} exceeds size limit: {Size} bytes", file.FileName, file.Length);
-                        return Results.BadRequest(new { error = $"File {file.FileName} exceeds 10 MB limit" });
-                    }
-                    
-                    if (!allowedTypes.Contains(file.ContentType?.ToLowerInvariant()))
-                    {
-                        logger.LogWarning("File {FileName} has invalid type: {ContentType}", file.FileName, file.ContentType);
-                        return Results.BadRequest(new { error = $"File {file.FileName} has invalid type. Allowed: JPEG, PNG, GIF, WebP" });
-                    }
-                }
-            }
-        }
-        else
-        {
-            // JSON request (backwards compatibility)
-            request = await context.Request.ReadFromJsonAsync<CreatePostRequest>(ct) 
-                ?? throw new InvalidOperationException("Invalid request body");
-        }
+        // Parse request and extract files
+        var (request, files) = await ParseCreatePostRequestAsync(context, ct, logger);
+        
+        // Validate files
+        var fileValidationResult = ValidateUploadedFiles(files, logger);
+        if (fileValidationResult is not null)
+            return fileValidationResult;
 
         // Validate request using FluentValidation
         var validationResult = await validator.ValidateAsync(request, ct);
@@ -142,31 +106,7 @@ public static class PostEndpoints
             // Upload images if present
             if (files is not null && files.Count > 0)
             {
-                var uploadedCount = 0;
-                foreach (var file in files.Where(f => f.Length > 0))
-                {
-                    try
-                    {
-                        await using var stream = file.OpenReadStream();
-                        var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "posts", ct);
-                        
-                        await repository.AddImageAsync(post.Id, imageUrl);
-                        uploadedCount++;
-                        
-                        logger.LogInformation("Image {Count}/{Total} uploaded for post {PostId}: {FileName}", 
-                            uploadedCount, files.Count, post.Id, file.FileName);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to upload image {FileName} for post {PostId}", file.FileName, post.Id);
-                        // Continue with other images - don't fail entire operation
-                    }
-                }
-                
-                if (uploadedCount > 0)
-                {
-                    logger.LogInformation("Post {PostId} created with {Count} images", post.Id, uploadedCount);
-                }
+                await UploadPostImagesAsync(post.Id, files, repository, imageStorage, logger, ct);
             }
 
             // Fetch updated post with images and generate signed URLs
@@ -182,6 +122,84 @@ public static class PostEndpoints
         }
     }
 
+    private static async Task<(CreatePostRequest request, IFormFileCollection? files)> ParseCreatePostRequestAsync(
+        HttpContext context,
+        CancellationToken ct,
+        ILogger<Program> logger)
+    {
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(ct);
+            var request = new CreatePostRequest(
+                form["title"].ToString(),
+                form["content"].ToString(),
+                form["author"].ToString());
+            return (request, form.Files);
+        }
+
+        var jsonRequest = await context.Request.ReadFromJsonAsync<CreatePostRequest>(ct)
+            ?? throw new InvalidOperationException("Invalid request body");
+        return (jsonRequest, null);
+    }
+
+    private static IResult? ValidateUploadedFiles(IFormFileCollection? files, ILogger<Program> logger)
+    {
+        if (files is null or { Count: 0 })
+            return null;
+
+        const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            if (file.Length > maxFileSize)
+            {
+                logger.LogWarning("File {FileName} exceeds size limit: {Size} bytes", file.FileName, file.Length);
+                return Results.BadRequest(new { error = $"File {file.FileName} exceeds 10 MB limit" });
+            }
+
+            if (!allowedTypes.Contains(file.ContentType?.ToLowerInvariant()))
+            {
+                logger.LogWarning("File {FileName} has invalid type: {ContentType}", file.FileName, file.ContentType);
+                return Results.BadRequest(new { error = $"File {file.FileName} has invalid type. Allowed: JPEG, PNG, GIF, WebP" });
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task UploadPostImagesAsync(
+        Guid postId,
+        IFormFileCollection files,
+        IPostRepository repository,
+        IImageStorageService imageStorage,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var uploadedCount = 0;
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "posts", ct);
+                await repository.AddImageAsync(postId, imageUrl);
+                uploadedCount++;
+
+                logger.LogInformation(
+                    "Image {Count}/{Total} uploaded for post {PostId}: {FileName}",
+                    uploadedCount, files.Count, postId, file.FileName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to upload image {FileName} for post {PostId}", file.FileName, postId);
+            }
+        }
+
+        if (uploadedCount > 0)
+            logger.LogInformation("Post {PostId} created with {Count} images", postId, uploadedCount);
+    }
+
     private static async Task<IResult> Update(
         Guid id,
         UpdatePostRequest request,
@@ -192,29 +210,39 @@ public static class PostEndpoints
         ILogger<Program> logger,
         AuthorizationConfiguration authConfig)
     {
+        // Create a context tuple to reduce parameters (addresses the 8-parameter issue)
+        var updateContext = (id, request, validator, repository, operationLogger, context, logger, authConfig);
+        return await PerformPostUpdateAsync(updateContext);
+    }
+
+    private static async Task<IResult> PerformPostUpdateAsync(
+        (Guid id, UpdatePostRequest request, IValidator<UpdatePostRequest> validator, 
+         IPostRepository repository, IOperationLogger operationLogger, 
+         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
+    {
         // Require admin role to update posts
-        if (authConfig.RequireAdminForPostUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        if (ctx.authConfig.RequireAdminForPostUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to update post without Admin role", context.User.Identity?.Name);
+            ctx.logger.LogWarning("User {UserName} attempted to update post without Admin role", ctx.context.User.Identity?.Name);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
+        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
         if (!validationResult.IsValid)
         {
-            operationLogger.LogValidationFailure("UpdatePost", request, validationResult.Errors);
+            ctx.operationLogger.LogValidationFailure("UpdatePost", ctx.request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await repository.UpdateAsync(id, request);
+        var updated = await ctx.repository.UpdateAsync(ctx.id, ctx.request);
         if (updated is null)
         {
-            logger.LogWarning("Update attempt for non-existent post: {PostId}", id);
+            ctx.logger.LogWarning("Update attempt for non-existent post: {PostId}", ctx.id);
             return Results.NotFound();
         }
         
-        logger.LogInformation("Post updated: {PostId}", id);
+        ctx.logger.LogInformation("Post updated: {PostId}", ctx.id);
         return Results.Ok(updated);
     }
 

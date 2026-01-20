@@ -1,6 +1,6 @@
 {
     "sonarlint.connectedMode.project": {
-        "connectionId": "michalb136-1",
+        "connectionId": "SimpleBlog",
         "projectKey": "MichalB136_SimpleBlog"
     }
 }

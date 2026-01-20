@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <CollectCoverageData>true</CollectCoverageData>
+    <CoverletOutputFormat>opencover</CoverletOutputFormat>
+    <CoverletOutput>../coverage/</CoverletOutput>
   </PropertyGroup>
 
   <ItemGroup>

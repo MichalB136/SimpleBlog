@@ -40,25 +40,34 @@ public static class ProductEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        EndpointConfiguration endpointConfig,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        var createContext = (request, validator, repository, operationLogger, context, logger, authConfig);
+        return await PerformProductCreateAsync(createContext);
+    }
+
+    private static async Task<IResult> PerformProductCreateAsync(
+        (CreateProductRequest request, IValidator<CreateProductRequest> validator,
+         IProductRepository repository, IOperationLogger operationLogger,
+         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
+    {
+        if (ctx.authConfig.RequireAdminForProductUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to create product without Admin role", context.User.Identity?.Name);
+            ctx.logger.LogWarning("User {UserName} attempted to create product without Admin role", ctx.context.User.Identity?.Name);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
+        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
         if (!validationResult.IsValid)
         {
-            operationLogger.LogValidationFailure("CreateProduct", request, validationResult.Errors);
+            ctx.operationLogger.LogValidationFailure("CreateProduct", ctx.request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var created = await repository.CreateAsync(request);
-        logger.LogInformation("Product created: {ProductId}", created.Id);
+        var created = await ctx.repository.CreateAsync(ctx.request);
+        ctx.logger.LogInformation("Product created: {ProductId}", created.Id);
+        var endpointConfig = ctx.context.RequestServices.GetRequiredService<EndpointConfiguration>();
         return Results.Created($"{endpointConfig.Products.Base}/{created.Id}", created);
     }
 
@@ -72,28 +81,37 @@ public static class ProductEndpoints
         ILogger<Program> logger,
         AuthorizationConfiguration authConfig)
     {
-        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        var updateContext = (id, request, validator, repository, operationLogger, context, logger, authConfig);
+        return await PerformProductUpdateAsync(updateContext);
+    }
+
+    private static async Task<IResult> PerformProductUpdateAsync(
+        (Guid id, UpdateProductRequest request, IValidator<UpdateProductRequest> validator,
+         IProductRepository repository, IOperationLogger operationLogger,
+         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
+    {
+        if (ctx.authConfig.RequireAdminForProductUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("Unauthorized update attempt for product: {ProductId}", id);
+            ctx.logger.LogWarning("Unauthorized update attempt for product: {ProductId}", ctx.id);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
+        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
         if (!validationResult.IsValid)
         {
-            operationLogger.LogValidationFailure("UpdateProduct", request, validationResult.Errors);
+            ctx.operationLogger.LogValidationFailure("UpdateProduct", ctx.request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await repository.UpdateAsync(id, request);
+        var updated = await ctx.repository.UpdateAsync(ctx.id, ctx.request);
         if (updated is null)
         {
-            logger.LogWarning("Update attempt for non-existent product: {ProductId}", id);
+            ctx.logger.LogWarning("Update attempt for non-existent product: {ProductId}", ctx.id);
             return Results.NotFound();
         }
         
-        logger.LogInformation("Product updated: {ProductId}", id);
+        ctx.logger.LogInformation("Product updated: {ProductId}", ctx.id);
         return Results.Ok(updated);
     }
 

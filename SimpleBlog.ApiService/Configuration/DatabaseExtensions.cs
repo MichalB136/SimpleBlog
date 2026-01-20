@@ -9,13 +9,15 @@ namespace SimpleBlog.ApiService.Configuration;
 /// <summary>
 /// Extension methods for database configuration
 /// </summary>
-public static class DatabaseExtensions
+public static partial class DatabaseExtensions
 {
+    [System.Text.RegularExpressions.GeneratedRegex(@"Password=[^;]*")]
+    private static partial System.Text.RegularExpressions.Regex PasswordRegex();
     public static void ConfigureDatabase(this WebApplicationBuilder builder, string connectionString)
     {
         // Log connection string for debugging (mask password)
         var maskedConnectionString = connectionString.Contains("Password=")
-            ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]*", "Password=***")
+            ? PasswordRegex().Replace(connectionString, "Password=***")
             : connectionString;
         var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("DatabaseConfiguration");
         logger.LogInformation("Using connection string: {ConnectionString}", maskedConnectionString);
