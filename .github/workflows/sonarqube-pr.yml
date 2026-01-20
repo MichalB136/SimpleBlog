@@ -50,7 +50,6 @@ jobs:
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Data/Migrations/**,**/*.Designer.cs" \
             /d:sonar.test.exclusions="**/Migrations/**" \
             /d:sonar.exclusions="**/obj/**,**/bin/**" \
-            /d:sonar.verbose=true
 
           dotnet build SimpleBlog.sln --no-restore --no-incremental
 

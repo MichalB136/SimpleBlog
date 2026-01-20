@@ -262,6 +262,9 @@ public sealed class UserRepositoryTests
         var result1 = await repository.RegisterAsync("user1", "user1@example.com", "Pass123!");
         var result2 = await repository.RegisterAsync("user2", "user2@example.com", "Pass123!");
         var result3 = await repository.RegisterAsync("user3", "user3@example.com", "Pass123!");
+        var login1 = await repository.ValidateUserAsync("user1", "Pass123!");
+        var login2 = await repository.ValidateUserAsync("user2", "Pass123!");
+        var login3 = await repository.ValidateUserAsync("user3", "Pass123!");
 
         // Assert
         Assert.True(result1.Success);
@@ -270,5 +273,8 @@ public sealed class UserRepositoryTests
         Assert.Null(result1.ErrorMessage);
         Assert.Null(result2.ErrorMessage);
         Assert.Null(result3.ErrorMessage);
+        Assert.NotNull(login1);
+        Assert.NotNull(login2);
+        Assert.NotNull(login3);
     }
 }

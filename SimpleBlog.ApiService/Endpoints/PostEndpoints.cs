@@ -8,6 +8,16 @@ namespace SimpleBlog.ApiService.Endpoints;
 
 public static class PostEndpoints
 {
+    private sealed record CreatePostDependencies(
+        HttpContext HttpContext,
+        IValidator<CreatePostRequest> Validator,
+        IPostRepository Repository,
+        IImageStorageService ImageStorage,
+        IOperationLogger OperationLogger,
+        ILogger<Program> Logger,
+        EndpointConfiguration EndpointConfig,
+        AuthorizationConfiguration AuthConfig);
+
     public static void MapPostEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
@@ -61,63 +71,76 @@ public static class PostEndpoints
         return Results.Ok(postWithSignedUrls);
     }
 
-    private static async Task<IResult> Create(
-        HttpContext context,
-        IValidator<CreatePostRequest> validator,
-        IPostRepository repository,
-        IImageStorageService imageStorage,
-        IOperationLogger operationLogger,
-        ILogger<Program> logger,
-        EndpointConfiguration endpointConfig,
-        AuthorizationConfiguration authConfig,
-        CancellationToken ct)
+    private static async Task<IResult> Create([AsParameters] CreatePostDependencies deps, CancellationToken ct)
     {
-        logger.LogInformation("POST {Endpoint} called by {UserName}", endpointConfig.Posts.Base, context.User.Identity?.Name);
-        
-        // Check authorization
-        if (authConfig.RequireAdminForPostCreate && !context.User.IsInRole(SeedDataConstants.AdminRole))
-        {
-            logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
-            return Results.Forbid();
-        }
+        deps.Logger.LogInformation("POST {Endpoint} called by {UserName}", deps.EndpointConfig.Posts.Base, deps.HttpContext.User.Identity?.Name);
 
-        // Parse request and extract files
-        var (request, files) = await ParseCreatePostRequestAsync(context, ct, logger);
-        
-        // Validate files
-        var fileValidationResult = ValidateUploadedFiles(files, logger);
+        var authorizationResult = EnsureCreateAuthorization(deps);
+        if (authorizationResult is not null)
+            return authorizationResult;
+
+        var (request, files) = await ParseCreatePostRequestAsync(deps.HttpContext, ct, deps.Logger);
+
+        var fileValidationResult = ValidateUploadedFiles(files, deps.Logger);
         if (fileValidationResult is not null)
             return fileValidationResult;
 
-        // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request, ct);
-        if (!validationResult.IsValid)
+        var validationResult = await ValidateCreateRequestAsync(request, deps.Validator, deps.OperationLogger, ct);
+        if (validationResult is not null)
+            return validationResult;
+
+        return await CreatePostWithAssetsAsync(request, files, deps, ct);
+    }
+
+    private static IResult? EnsureCreateAuthorization(CreatePostDependencies deps)
+    {
+        if (deps.AuthConfig.RequireAdminForPostCreate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            operationLogger.LogValidationFailure("CreatePost", request, validationResult.Errors);
-            return Results.ValidationProblem(validationResult.ToDictionary());
+            deps.Logger.LogWarning("User {UserName} attempted to create post without Admin role", deps.HttpContext.User.Identity?.Name);
+            return Results.Forbid();
         }
 
+        return null;
+    }
+
+    private static async Task<IResult?> ValidateCreateRequestAsync(
+        CreatePostRequest request,
+        IValidator<CreatePostRequest> validator,
+        IOperationLogger operationLogger,
+        CancellationToken ct)
+    {
+        var validationResult = await validator.ValidateAsync(request, ct);
+        if (validationResult.IsValid)
+            return null;
+
+        operationLogger.LogValidationFailure("CreatePost", request, validationResult.Errors);
+        return Results.ValidationProblem(validationResult.ToDictionary());
+    }
+
+    private static async Task<IResult> CreatePostWithAssetsAsync(
+        CreatePostRequest request,
+        IFormFileCollection? files,
+        CreatePostDependencies deps,
+        CancellationToken ct)
+    {
         try
         {
-            // Create post first
-            var post = await repository.CreateAsync(request);
-            logger.LogInformation("Post created: {PostId}", post.Id);
+            var post = await deps.Repository.CreateAsync(request);
+            deps.Logger.LogInformation("Post created: {PostId}", post.Id);
 
-            // Upload images if present
-            if (files is not null && files.Count > 0)
+            if (files is { Count: > 0 })
             {
-                await UploadPostImagesAsync(post.Id, files, repository, imageStorage, logger, ct);
+                await UploadPostImagesAsync(post.Id, files, deps.Repository, deps.ImageStorage, deps.Logger, ct);
             }
 
-            // Fetch updated post with images and generate signed URLs
-            var updatedPost = await repository.GetByIdAsync(post.Id);
-            var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost!, imageStorage);
-            
-            return Results.Created($"{endpointConfig.Posts.Base}/{post.Id}", postWithSignedUrls);
+            var updatedPost = await deps.Repository.GetByIdAsync(post.Id);
+            var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost!, deps.ImageStorage);
+
+            return Results.Created($"{deps.EndpointConfig.Posts.Base}/{post.Id}", postWithSignedUrls);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating post");
+            deps.Logger.LogError(ex, "Error creating post");
             return Results.Problem("Failed to create post");
         }
     }
