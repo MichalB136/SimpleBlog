@@ -18,6 +18,17 @@ public static class PostEndpoints
         EndpointConfiguration EndpointConfig,
         AuthorizationConfiguration AuthConfig);
 
+    private sealed record UpdatePostDependencies(
+        Guid Id,
+        UpdatePostRequest Request,
+        IValidator<UpdatePostRequest> Validator,
+        IPostRepository Repository,
+        IOperationLogger OperationLogger,
+        HttpContext HttpContext,
+        ILogger<Program> Logger,
+        AuthorizationConfiguration AuthConfig,
+        EndpointConfiguration EndpointConfig);
+
     public static void MapPostEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
@@ -231,41 +242,38 @@ public static class PostEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
     {
-        // Create a context tuple to reduce parameters (addresses the 8-parameter issue)
-        var updateContext = (id, request, validator, repository, operationLogger, context, logger, authConfig);
-        return await PerformPostUpdateAsync(updateContext);
+        var deps = new UpdatePostDependencies(id, request, validator, repository, operationLogger, context, logger, authConfig, endpointConfig);
+        return await PerformPostUpdateAsync(deps);
     }
 
-    private static async Task<IResult> PerformPostUpdateAsync(
-        (Guid id, UpdatePostRequest request, IValidator<UpdatePostRequest> validator, 
-         IPostRepository repository, IOperationLogger operationLogger, 
-         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
+    private static async Task<IResult> PerformPostUpdateAsync(UpdatePostDependencies deps)
     {
         // Require admin role to update posts
-        if (ctx.authConfig.RequireAdminForPostUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
+        if (deps.AuthConfig.RequireAdminForPostUpdate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            ctx.logger.LogWarning("User {UserName} attempted to update post without Admin role", ctx.context.User.Identity?.Name);
+            deps.Logger.LogWarning("User {UserName} attempted to update post without Admin role", deps.HttpContext.User.Identity?.Name);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
+        var validationResult = await deps.Validator.ValidateAsync(deps.Request);
         if (!validationResult.IsValid)
         {
-            ctx.operationLogger.LogValidationFailure("UpdatePost", ctx.request, validationResult.Errors);
+            deps.OperationLogger.LogValidationFailure("UpdatePost", deps.Request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await ctx.repository.UpdateAsync(ctx.id, ctx.request);
+        var updated = await deps.Repository.UpdateAsync(deps.Id, deps.Request);
         if (updated is null)
         {
-            ctx.logger.LogWarning("Update attempt for non-existent post: {PostId}", ctx.id);
+            deps.Logger.LogWarning("Update attempt for non-existent post: {PostId}", deps.Id);
             return Results.NotFound();
         }
         
-        ctx.logger.LogInformation("Post updated: {PostId}", ctx.id);
+        deps.Logger.LogInformation("Post updated: {PostId}", deps.Id);
         return Results.Ok(updated);
     }
 

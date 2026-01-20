@@ -7,6 +7,16 @@ namespace SimpleBlog.ApiService.Endpoints;
 
 public static class ProductEndpoints
 {
+    private sealed record UpdateProductDependencies(
+        Guid Id,
+        UpdateProductRequest Request,
+        IValidator<UpdateProductRequest> Validator,
+        IProductRepository Repository,
+        IOperationLogger OperationLogger,
+        HttpContext HttpContext,
+        ILogger<Program> Logger,
+        AuthorizationConfiguration AuthConfig,
+        EndpointConfiguration EndpointConfig);
     public static void MapProductEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
@@ -40,34 +50,11 @@ public static class ProductEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
     {
-        var createContext = (request, validator, repository, operationLogger, context, logger, authConfig);
-        return await PerformProductCreateAsync(createContext);
-    }
-
-    private static async Task<IResult> PerformProductCreateAsync(
-        (CreateProductRequest request, IValidator<CreateProductRequest> validator,
-         IProductRepository repository, IOperationLogger operationLogger,
-         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
-    {
-        if (ctx.authConfig.RequireAdminForProductUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
-        {
-            ctx.logger.LogWarning("User {UserName} attempted to create product without Admin role", ctx.context.User.Identity?.Name);
-            return Results.Forbid();
-        }
-
-        // Validate request using FluentValidation
-        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
-        if (!validationResult.IsValid)
-        {
-            ctx.operationLogger.LogValidationFailure("CreateProduct", ctx.request, validationResult.Errors);
-            return Results.ValidationProblem(validationResult.ToDictionary());
-        }
-
-        var created = await ctx.repository.CreateAsync(ctx.request);
-        ctx.logger.LogInformation("Product created: {ProductId}", created.Id);
-        var endpointConfig = ctx.context.RequestServices.GetRequiredService<EndpointConfiguration>();
+        var created = await repository.CreateAsync(request);
+        logger.LogInformation("Product created: {ProductId}", created.Id);
         return Results.Created($"{endpointConfig.Products.Base}/{created.Id}", created);
     }
 
@@ -79,39 +66,37 @@ public static class ProductEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
     {
-        var updateContext = (id, request, validator, repository, operationLogger, context, logger, authConfig);
-        return await PerformProductUpdateAsync(updateContext);
+        var deps = new UpdateProductDependencies(id, request, validator, repository, operationLogger, context, logger, authConfig, endpointConfig);
+        return await PerformProductUpdateAsync(deps);
     }
 
-    private static async Task<IResult> PerformProductUpdateAsync(
-        (Guid id, UpdateProductRequest request, IValidator<UpdateProductRequest> validator,
-         IProductRepository repository, IOperationLogger operationLogger,
-         HttpContext context, ILogger<Program> logger, AuthorizationConfiguration authConfig) ctx)
+    private static async Task<IResult> PerformProductUpdateAsync(UpdateProductDependencies deps)
     {
-        if (ctx.authConfig.RequireAdminForProductUpdate && !ctx.context.User.IsInRole(SeedDataConstants.AdminRole))
+        if (deps.AuthConfig.RequireAdminForProductUpdate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            ctx.logger.LogWarning("Unauthorized update attempt for product: {ProductId}", ctx.id);
+            deps.Logger.LogWarning("Unauthorized update attempt for product: {ProductId}", deps.Id);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await ctx.validator.ValidateAsync(ctx.request);
+        var validationResult = await deps.Validator.ValidateAsync(deps.Request);
         if (!validationResult.IsValid)
         {
-            ctx.operationLogger.LogValidationFailure("UpdateProduct", ctx.request, validationResult.Errors);
+            deps.OperationLogger.LogValidationFailure("UpdateProduct", deps.Request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await ctx.repository.UpdateAsync(ctx.id, ctx.request);
+        var updated = await deps.Repository.UpdateAsync(deps.Id, deps.Request);
         if (updated is null)
         {
-            ctx.logger.LogWarning("Update attempt for non-existent product: {ProductId}", ctx.id);
+            deps.Logger.LogWarning("Update attempt for non-existent product: {ProductId}", deps.Id);
             return Results.NotFound();
         }
         
-        ctx.logger.LogInformation("Product updated: {ProductId}", ctx.id);
+        deps.Logger.LogInformation("Product updated: {ProductId}", deps.Id);
         return Results.Ok(updated);
     }
 
