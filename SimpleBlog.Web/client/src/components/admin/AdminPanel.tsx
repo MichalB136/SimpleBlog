@@ -47,6 +47,17 @@ export function AdminPanel() {
     [],
   );
 
+  if (user?.role !== 'Admin') {
+    return (
+      <div className="container mt-5">
+        <div className="alert alert-danger">
+          <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{' '}
+          Dostęp tylko dla administratorów
+        </div>
+      </div>
+    );
+  }
+
   const handleThemeUpdate = useCallback(async () => {
     if (!selectedTheme) return;
 
@@ -123,17 +134,6 @@ export function AdminPanel() {
 
   const getThemeDisplayName = useCallback((theme: string) => themeDisplayNameMap[theme as keyof typeof themeDisplayNameMap] || theme, [themeDisplayNameMap]);
   const getThemeIcon = useCallback((theme: string) => themeIconMap[theme as keyof typeof themeIconMap] || 'palette', [themeIconMap]);
-
-  if (user?.role !== 'Admin') {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">
-          <i className="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{' '}
-          Dostęp tylko dla administratorów
-        </div>
-      </div>
-    );
-  }
 
   const renderAlert = () =>
     message && (
@@ -366,8 +366,8 @@ export function AdminPanel() {
       </h2>
 
       {/* Tabs Navigation */}
-      <ul className="nav nav-tabs mb-4">
-        <li className="nav-item">
+      <ul className="nav nav-tabs mb-4" role="tablist">
+        <li className="nav-item" role="presentation">
           <button
             className={`nav-link ${activeTab === 'site' ? 'active' : ''}`}
             onClick={() => setActiveTab('site')}
@@ -379,7 +379,7 @@ export function AdminPanel() {
             Ustawienia strony
           </button>
         </li>
-        <li className="nav-item">
+        <li className="nav-item" role="presentation">
           <button
             className={`nav-link ${activeTab === 'tags' ? 'active' : ''}`}
             onClick={() => setActiveTab('tags')}
@@ -391,7 +391,7 @@ export function AdminPanel() {
             Zarządzanie tagami
           </button>
         </li>
-        <li className="nav-item">
+        <li className="nav-item" role="presentation">
           <button
             className={`nav-link ${activeTab === 'products' ? 'active' : ''}`}
             onClick={() => setActiveTab('products')}
