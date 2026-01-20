@@ -45,12 +45,8 @@ public static class ProductEndpoints
 
     private static async Task<IResult> Create(
         CreateProductRequest request,
-        IValidator<CreateProductRequest> validator,
         IProductRepository repository,
-        IOperationLogger operationLogger,
-        HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig,
         EndpointConfiguration endpointConfig)
     {
         var created = await repository.CreateAsync(request);

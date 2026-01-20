@@ -114,7 +114,7 @@ export function AdminPanel() {
   }, [uploadLogo]);
 
   const handleLogoDelete = useCallback(async () => {
-    if (!window.confirm('Czy na pewno chcesz usunąć logo?')) return;
+    if (!globalThis.confirm('Czy na pewno chcesz usunąć logo?')) return;
 
     setUploading(true);
     setMessage(null);
@@ -132,8 +132,8 @@ export function AdminPanel() {
     setTimeout(() => setMessage(null), 3000);
   }, [deleteLogo]);
 
-  const getThemeDisplayName = useCallback((theme: string) => themeDisplayNameMap[theme] || theme, [themeDisplayNameMap]);
-  const getThemeIcon = useCallback((theme: string) => themeIconMap[theme] || 'palette', [themeIconMap]);
+  const getThemeDisplayName = useCallback((theme: string) => themeDisplayNameMap[theme as keyof typeof themeDisplayNameMap] || theme, [themeDisplayNameMap]);
+  const getThemeIcon = useCallback((theme: string) => themeIconMap[theme as keyof typeof themeIconMap] || 'palette', [themeIconMap]);
 
   const renderAlert = () =>
     message && (
@@ -375,7 +375,7 @@ export function AdminPanel() {
             role="tab"
             aria-selected={activeTab === 'site'}
           >
-            <i className="bi bi-palette me-2"></i>
+            <i className="bi bi-palette me-2" aria-hidden="true"></i>{' '}
             Ustawienia strony
           </button>
         </li>
@@ -387,7 +387,7 @@ export function AdminPanel() {
             role="tab"
             aria-selected={activeTab === 'tags'}
           >
-            <i className="bi bi-tags me-2"></i>
+            <i className="bi bi-tags me-2" aria-hidden="true"></i>{' '}
             Zarządzanie tagami
           </button>
         </li>
@@ -399,7 +399,7 @@ export function AdminPanel() {
             role="tab"
             aria-selected={activeTab === 'products'}
           >
-            <i className="bi bi-bag me-2"></i>
+            <i className="bi bi-bag me-2" aria-hidden="true"></i>{' '}
             Produkty
           </button>
         </li>
