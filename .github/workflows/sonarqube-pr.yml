@@ -38,20 +38,20 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
+          dotnet restore SimpleBlog.sln
+          
           dotnet sonarscanner begin \
             /k:"MichalB136_SimpleBlog" \
             /n:"SimpleBlog" \
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
-            /d:sonar.sources="SimpleBlog.ApiService,SimpleBlog.Blog.Services,SimpleBlog.Shop.Services,SimpleBlog.Common,SimpleBlog.Common.Api,SimpleBlog.Email.Services,SimpleBlog.ServiceDefaults,SimpleBlog.Web" \
-            /d:sonar.tests="SimpleBlog.Tests" \
             /d:sonar.cs.vstest.reportsPaths="**/TestResults.trx" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/Migrations/**,**/Data/Migrations/**,**/*.Designer.cs,**/obj/**,**/bin/**" \
-            /d:sonar.test.exclusions="**/Migrations/**,**/Data/Migrations/**" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Data/Migrations/**,**/*.Designer.cs" \
+            /d:sonar.test.exclusions="**/Migrations/**" \
+            /d:sonar.exclusions="**/obj/**,**/bin/**" \
             /d:sonar.verbose=true
 
-          dotnet restore SimpleBlog.sln
           dotnet build SimpleBlog.sln --no-restore --no-incremental
 
           # Run tests with code coverage collection (OpenCover format)
