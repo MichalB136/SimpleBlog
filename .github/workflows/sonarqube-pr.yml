@@ -1,6 +1,7 @@
 name: SonarQube PR Analysis
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
