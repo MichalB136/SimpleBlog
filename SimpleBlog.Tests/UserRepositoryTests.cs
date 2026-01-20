@@ -230,27 +230,6 @@ public sealed class UserRepositoryTests
         Assert.Equal("User", user.Role);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData(null)]
-    public async Task RegisterAsync_EmptyUsername_Fails(string? username)
-    {
-        // Arrange
-        var repository = new TestUserRepository();
-
-        // Act & Assert
-        // This test documents that validation should be done by FluentValidation
-        // at the API level before calling RegisterAsync
-        // The implementation handles null gracefully
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            var (success, errorMessage) = await repository.RegisterAsync(username ?? "", "test@example.com", "Pass123!");
-            // Empty username would be treated as a potential duplicate
-            // Proper validation should prevent this at API level
-        }
-    }
-
     [Fact]
     public async Task RegisterAsync_MultipleNewUsers_EachRegistersSuccessfully()
     {
@@ -261,6 +240,9 @@ public sealed class UserRepositoryTests
         var result1 = await repository.RegisterAsync("user1", "user1@example.com", "Pass123!");
         var result2 = await repository.RegisterAsync("user2", "user2@example.com", "Pass123!");
         var result3 = await repository.RegisterAsync("user3", "user3@example.com", "Pass123!");
+        var login1 = await repository.ValidateUserAsync("user1", "Pass123!");
+        var login2 = await repository.ValidateUserAsync("user2", "Pass123!");
+        var login3 = await repository.ValidateUserAsync("user3", "Pass123!");
 
         // Assert
         Assert.True(result1.Success);
@@ -269,5 +251,8 @@ public sealed class UserRepositoryTests
         Assert.Null(result1.ErrorMessage);
         Assert.Null(result2.ErrorMessage);
         Assert.Null(result3.ErrorMessage);
+        Assert.NotNull(login1);
+        Assert.NotNull(login2);
+        Assert.NotNull(login3);
     }
 }

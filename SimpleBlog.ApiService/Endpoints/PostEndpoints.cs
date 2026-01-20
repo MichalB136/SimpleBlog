@@ -8,6 +8,27 @@ namespace SimpleBlog.ApiService.Endpoints;
 
 public static class PostEndpoints
 {
+    private sealed record CreatePostDependencies(
+        HttpContext HttpContext,
+        IValidator<CreatePostRequest> Validator,
+        IPostRepository Repository,
+        IImageStorageService ImageStorage,
+        IOperationLogger OperationLogger,
+        ILogger<Program> Logger,
+        EndpointConfiguration EndpointConfig,
+        AuthorizationConfiguration AuthConfig);
+
+    private sealed record UpdatePostDependencies(
+        Guid Id,
+        UpdatePostRequest Request,
+        IValidator<UpdatePostRequest> Validator,
+        IPostRepository Repository,
+        IOperationLogger OperationLogger,
+        HttpContext HttpContext,
+        ILogger<Program> Logger,
+        AuthorizationConfiguration AuthConfig,
+        EndpointConfiguration EndpointConfig);
+
     public static void MapPostEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
@@ -61,125 +82,156 @@ public static class PostEndpoints
         return Results.Ok(postWithSignedUrls);
     }
 
-    private static async Task<IResult> Create(
-        HttpContext context,
-        IValidator<CreatePostRequest> validator,
-        IPostRepository repository,
-        IImageStorageService imageStorage,
-        IOperationLogger operationLogger,
-        ILogger<Program> logger,
-        EndpointConfiguration endpointConfig,
-        AuthorizationConfiguration authConfig,
-        CancellationToken ct)
+    private static async Task<IResult> Create([AsParameters] CreatePostDependencies deps, CancellationToken ct)
     {
-        logger.LogInformation("POST {Endpoint} called by {UserName}", endpointConfig.Posts.Base, context.User.Identity?.Name);
-        
-        // Require admin role to create posts
-        if (authConfig.RequireAdminForPostCreate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        deps.Logger.LogInformation("POST {Endpoint} called by {UserName}", deps.EndpointConfig.Posts.Base, deps.HttpContext.User.Identity?.Name);
+
+        var authorizationResult = EnsureCreateAuthorization(deps);
+        if (authorizationResult is not null)
+            return authorizationResult;
+
+        var (request, files) = await ParseCreatePostRequestAsync(deps.HttpContext, ct, deps.Logger);
+
+        var fileValidationResult = ValidateUploadedFiles(files, deps.Logger);
+        if (fileValidationResult is not null)
+            return fileValidationResult;
+
+        var validationResult = await ValidateCreateRequestAsync(request, deps.Validator, deps.OperationLogger, ct);
+        if (validationResult is not null)
+            return validationResult;
+
+        return await CreatePostWithAssetsAsync(request, files, deps, ct);
+    }
+
+    private static IResult? EnsureCreateAuthorization(CreatePostDependencies deps)
+    {
+        if (deps.AuthConfig.RequireAdminForPostCreate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
+            deps.Logger.LogWarning("User {UserName} attempted to create post without Admin role", deps.HttpContext.User.Identity?.Name);
             return Results.Forbid();
         }
 
-        CreatePostRequest request;
-        IFormFileCollection? files = null;
+        return null;
+    }
 
-        // Check if it's multipart (with files) or JSON
-        if (context.Request.HasFormContentType)
-        {
-            // Parse form data
-            var form = await context.Request.ReadFormAsync(ct);
-            var title = form["title"].ToString();
-            var content = form["content"].ToString();
-            var author = form["author"].ToString();
-            files = form.Files;
-            
-            request = new CreatePostRequest(title, content, author);
-            
-            // Validate files if present
-            if (files.Count > 0)
-            {
-                const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-                var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
-                
-                foreach (var file in files.Where(f => f.Length > 0))
-                {
-                    if (file.Length > maxFileSize)
-                    {
-                        logger.LogWarning("File {FileName} exceeds size limit: {Size} bytes", file.FileName, file.Length);
-                        return Results.BadRequest(new { error = $"File {file.FileName} exceeds 10 MB limit" });
-                    }
-                    
-                    if (!allowedTypes.Contains(file.ContentType?.ToLowerInvariant()))
-                    {
-                        logger.LogWarning("File {FileName} has invalid type: {ContentType}", file.FileName, file.ContentType);
-                        return Results.BadRequest(new { error = $"File {file.FileName} has invalid type. Allowed: JPEG, PNG, GIF, WebP" });
-                    }
-                }
-            }
-        }
-        else
-        {
-            // JSON request (backwards compatibility)
-            request = await context.Request.ReadFromJsonAsync<CreatePostRequest>(ct) 
-                ?? throw new InvalidOperationException("Invalid request body");
-        }
-
-        // Validate request using FluentValidation
+    private static async Task<IResult?> ValidateCreateRequestAsync(
+        CreatePostRequest request,
+        IValidator<CreatePostRequest> validator,
+        IOperationLogger operationLogger,
+        CancellationToken ct)
+    {
         var validationResult = await validator.ValidateAsync(request, ct);
-        if (!validationResult.IsValid)
-        {
-            operationLogger.LogValidationFailure("CreatePost", request, validationResult.Errors);
-            return Results.ValidationProblem(validationResult.ToDictionary());
-        }
+        if (validationResult.IsValid)
+            return null;
 
+        operationLogger.LogValidationFailure("CreatePost", request, validationResult.Errors);
+        return Results.ValidationProblem(validationResult.ToDictionary());
+    }
+
+    private static async Task<IResult> CreatePostWithAssetsAsync(
+        CreatePostRequest request,
+        IFormFileCollection? files,
+        CreatePostDependencies deps,
+        CancellationToken ct)
+    {
         try
         {
-            // Create post first
-            var post = await repository.CreateAsync(request);
-            logger.LogInformation("Post created: {PostId}", post.Id);
+            var post = await deps.Repository.CreateAsync(request);
+            deps.Logger.LogInformation("Post created: {PostId}", post.Id);
 
-            // Upload images if present
-            if (files is not null && files.Count > 0)
+            if (files is { Count: > 0 })
             {
-                var uploadedCount = 0;
-                foreach (var file in files.Where(f => f.Length > 0))
-                {
-                    try
-                    {
-                        await using var stream = file.OpenReadStream();
-                        var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "posts", ct);
-                        
-                        await repository.AddImageAsync(post.Id, imageUrl);
-                        uploadedCount++;
-                        
-                        logger.LogInformation("Image {Count}/{Total} uploaded for post {PostId}: {FileName}", 
-                            uploadedCount, files.Count, post.Id, file.FileName);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to upload image {FileName} for post {PostId}", file.FileName, post.Id);
-                        // Continue with other images - don't fail entire operation
-                    }
-                }
-                
-                if (uploadedCount > 0)
-                {
-                    logger.LogInformation("Post {PostId} created with {Count} images", post.Id, uploadedCount);
-                }
+                await UploadPostImagesAsync(post.Id, files, deps.Repository, deps.ImageStorage, deps.Logger, ct);
             }
 
-            // Fetch updated post with images and generate signed URLs
-            var updatedPost = await repository.GetByIdAsync(post.Id);
-            var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost!, imageStorage);
-            
-            return Results.Created($"{endpointConfig.Posts.Base}/{post.Id}", postWithSignedUrls);
+            var updatedPost = await deps.Repository.GetByIdAsync(post.Id);
+            var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost!, deps.ImageStorage);
+
+            return Results.Created($"{deps.EndpointConfig.Posts.Base}/{post.Id}", postWithSignedUrls);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating post");
+            deps.Logger.LogError(ex, "Error creating post");
             return Results.Problem("Failed to create post");
         }
+    }
+
+    private static async Task<(CreatePostRequest request, IFormFileCollection? files)> ParseCreatePostRequestAsync(
+        HttpContext context,
+        CancellationToken ct,
+        ILogger<Program> logger)
+    {
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(ct);
+            var request = new CreatePostRequest(
+                form["title"].ToString(),
+                form["content"].ToString(),
+                form["author"].ToString());
+            return (request, form.Files);
+        }
+
+        var jsonRequest = await context.Request.ReadFromJsonAsync<CreatePostRequest>(ct)
+            ?? throw new InvalidOperationException("Invalid request body");
+        return (jsonRequest, null);
+    }
+
+    private static IResult? ValidateUploadedFiles(IFormFileCollection? files, ILogger<Program> logger)
+    {
+        if (files is null or { Count: 0 })
+            return null;
+
+        const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            if (file.Length > maxFileSize)
+            {
+                logger.LogWarning("File {FileName} exceeds size limit: {Size} bytes", file.FileName, file.Length);
+                return Results.BadRequest(new { error = $"File {file.FileName} exceeds 10 MB limit" });
+            }
+
+            if (!allowedTypes.Contains(file.ContentType?.ToLowerInvariant()))
+            {
+                logger.LogWarning("File {FileName} has invalid type: {ContentType}", file.FileName, file.ContentType);
+                return Results.BadRequest(new { error = $"File {file.FileName} has invalid type. Allowed: JPEG, PNG, GIF, WebP" });
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task UploadPostImagesAsync(
+        Guid postId,
+        IFormFileCollection files,
+        IPostRepository repository,
+        IImageStorageService imageStorage,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var uploadedCount = 0;
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "posts", ct);
+                await repository.AddImageAsync(postId, imageUrl);
+                uploadedCount++;
+
+                logger.LogInformation(
+                    "Image {Count}/{Total} uploaded for post {PostId}: {FileName}",
+                    uploadedCount, files.Count, postId, file.FileName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to upload image {FileName} for post {PostId}", file.FileName, postId);
+            }
+        }
+
+        if (uploadedCount > 0)
+            logger.LogInformation("Post {PostId} created with {Count} images", postId, uploadedCount);
     }
 
     private static async Task<IResult> Update(
@@ -190,31 +242,38 @@ public static class PostEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
+    {
+        var deps = new UpdatePostDependencies(id, request, validator, repository, operationLogger, context, logger, authConfig, endpointConfig);
+        return await PerformPostUpdateAsync(deps);
+    }
+
+    private static async Task<IResult> PerformPostUpdateAsync(UpdatePostDependencies deps)
     {
         // Require admin role to update posts
-        if (authConfig.RequireAdminForPostUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        if (deps.AuthConfig.RequireAdminForPostUpdate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to update post without Admin role", context.User.Identity?.Name);
+            deps.Logger.LogWarning("User {UserName} attempted to update post without Admin role", deps.HttpContext.User.Identity?.Name);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
+        var validationResult = await deps.Validator.ValidateAsync(deps.Request);
         if (!validationResult.IsValid)
         {
-            operationLogger.LogValidationFailure("UpdatePost", request, validationResult.Errors);
+            deps.OperationLogger.LogValidationFailure("UpdatePost", deps.Request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await repository.UpdateAsync(id, request);
+        var updated = await deps.Repository.UpdateAsync(deps.Id, deps.Request);
         if (updated is null)
         {
-            logger.LogWarning("Update attempt for non-existent post: {PostId}", id);
+            deps.Logger.LogWarning("Update attempt for non-existent post: {PostId}", deps.Id);
             return Results.NotFound();
         }
         
-        logger.LogInformation("Post updated: {PostId}", id);
+        deps.Logger.LogInformation("Post updated: {PostId}", deps.Id);
         return Results.Ok(updated);
     }
 

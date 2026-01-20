@@ -7,6 +7,16 @@ namespace SimpleBlog.ApiService.Endpoints;
 
 public static class ProductEndpoints
 {
+    private sealed record UpdateProductDependencies(
+        Guid Id,
+        UpdateProductRequest Request,
+        IValidator<UpdateProductRequest> Validator,
+        IProductRepository Repository,
+        IOperationLogger OperationLogger,
+        HttpContext HttpContext,
+        ILogger<Program> Logger,
+        AuthorizationConfiguration AuthConfig,
+        EndpointConfiguration EndpointConfig);
     public static void MapProductEndpoints(this WebApplication app)
     {
         var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
@@ -40,23 +50,9 @@ public static class ProductEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        EndpointConfiguration endpointConfig,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
     {
-        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
-        {
-            logger.LogWarning("User {UserName} attempted to create product without Admin role", context.User.Identity?.Name);
-            return Results.Forbid();
-        }
-
-        // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
-        if (!validationResult.IsValid)
-        {
-            operationLogger.LogValidationFailure("CreateProduct", request, validationResult.Errors);
-            return Results.ValidationProblem(validationResult.ToDictionary());
-        }
-
         var created = await repository.CreateAsync(request);
         logger.LogInformation("Product created: {ProductId}", created.Id);
         return Results.Created($"{endpointConfig.Products.Base}/{created.Id}", created);
@@ -70,30 +66,37 @@ public static class ProductEndpoints
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
+        AuthorizationConfiguration authConfig,
+        EndpointConfiguration endpointConfig)
     {
-        if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
+        var deps = new UpdateProductDependencies(id, request, validator, repository, operationLogger, context, logger, authConfig, endpointConfig);
+        return await PerformProductUpdateAsync(deps);
+    }
+
+    private static async Task<IResult> PerformProductUpdateAsync(UpdateProductDependencies deps)
+    {
+        if (deps.AuthConfig.RequireAdminForProductUpdate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("Unauthorized update attempt for product: {ProductId}", id);
+            deps.Logger.LogWarning("Unauthorized update attempt for product: {ProductId}", deps.Id);
             return Results.Forbid();
         }
 
         // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
+        var validationResult = await deps.Validator.ValidateAsync(deps.Request);
         if (!validationResult.IsValid)
         {
-            operationLogger.LogValidationFailure("UpdateProduct", request, validationResult.Errors);
+            deps.OperationLogger.LogValidationFailure("UpdateProduct", deps.Request, validationResult.Errors);
             return Results.ValidationProblem(validationResult.ToDictionary());
         }
 
-        var updated = await repository.UpdateAsync(id, request);
+        var updated = await deps.Repository.UpdateAsync(deps.Id, deps.Request);
         if (updated is null)
         {
-            logger.LogWarning("Update attempt for non-existent product: {ProductId}", id);
+            deps.Logger.LogWarning("Update attempt for non-existent product: {ProductId}", deps.Id);
             return Results.NotFound();
         }
         
-        logger.LogInformation("Product updated: {ProductId}", id);
+        deps.Logger.LogInformation("Product updated: {ProductId}", deps.Id);
         return Results.Ok(updated);
     }
 

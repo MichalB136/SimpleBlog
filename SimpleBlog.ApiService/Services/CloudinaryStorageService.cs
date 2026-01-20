@@ -9,6 +9,9 @@ public sealed class CloudinaryStorageService(
     IConfiguration configuration,
     ILogger<CloudinaryStorageService> logger) : IImageStorageService
 {
+    private const string UploadTypePrivate = "private";
+    private const string CloudinaryUriScheme = "cloudinary://";
+    
     private readonly string _rootFolder = configuration["Cloudinary:RootFolder"] ?? "simpleblog";
 
     public async Task<string> UploadImageAsync(
@@ -31,7 +34,7 @@ public sealed class CloudinaryStorageService(
                 UniqueFilename = false,
                 Overwrite = true,
                 PublicId = Path.GetFileNameWithoutExtension(fileName),
-                Type = "private"  // Private upload type - requires signed URLs
+                Type = UploadTypePrivate
             };
 
             var uploadResult = await cloudinary.UploadAsync(uploadParams, cancellationToken);
@@ -52,8 +55,8 @@ public sealed class CloudinaryStorageService(
             // For private images, return only the public_id with a marker prefix
             // We'll generate signed URLs on-demand when retrieving settings
             // Format: cloudinary://public_id
-            return uploadResult.Type == "private" 
-                ? $"cloudinary://{uploadResult.PublicId}"
+            return uploadResult.Type == UploadTypePrivate 
+                ? $"{CloudinaryUriScheme}{uploadResult.PublicId}"
                 : uploadResult.SecureUrl.ToString();
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
@@ -76,8 +79,8 @@ public sealed class CloudinaryStorageService(
         try
         {
             // Check if this is our internal format (cloudinary://public_id) or legacy format
-            var publicId = imageUrl.StartsWith("cloudinary://")
-                ? imageUrl["cloudinary://".Length..]
+            var publicId = imageUrl.StartsWith(CloudinaryUriScheme)
+                ? imageUrl[CloudinaryUriScheme.Length..]
                 : ExtractPublicIdFromUrl(imageUrl) ?? string.Empty;
             
             if (string.IsNullOrEmpty(publicId))
@@ -91,7 +94,7 @@ public sealed class CloudinaryStorageService(
             var deletionParams = new DeletionParams(publicId)
             {
                 ResourceType = ResourceType.Image,
-                Type = "private" // Try private first, will fall back if needed
+                Type = UploadTypePrivate
             };
             
             var deletionResult = await cloudinary.DestroyAsync(deletionParams);

@@ -13,13 +13,6 @@ public static class DatabaseExtensions
 {
     public static void ConfigureDatabase(this WebApplicationBuilder builder, string connectionString)
     {
-        // Log connection string for debugging (mask password)
-        var maskedConnectionString = connectionString.Contains("Password=")
-            ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]*", "Password=***")
-            : connectionString;
-        var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("DatabaseConfiguration");
-        logger.LogInformation("Using connection string: {ConnectionString}", maskedConnectionString);
-
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
 
