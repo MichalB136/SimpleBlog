@@ -42,14 +42,14 @@ jobs:
             /n:"SimpleBlog" \
             /o:"michalb136-1" \
             /d:sonar.login="$SONAR_TOKEN" \
-            /d:sonar.cs.vstest.reportsPaths=**/TestResults/*.trx \
-            /d:sonar.coverageReportPaths=coverage/**/coverage.cobertura.xml \
+            /d:sonar.cs.vstest.reportsPaths=**/TestResults.trx \
+            /d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml \
             /d:sonar.verbose=true
 
           dotnet restore SimpleBlog.sln
           dotnet build SimpleBlog.sln --no-restore --no-incremental
 
-          # Run tests with code coverage collection
+          # Run tests with code coverage collection (OpenCover format)
           dotnet test SimpleBlog.sln \
             --no-build \
             --configuration Debug \
@@ -58,14 +58,14 @@ jobs:
             --results-directory=./coverage
 
           # Check if coverage file was generated
-          if ! find coverage -name "coverage.cobertura.xml" 2>/dev/null | grep -q .; then
+          if ! find coverage -name "coverage.opencover.xml" 2>/dev/null | grep -q .; then
             echo "ERROR: No coverage report found"
             find coverage -type f || echo "Coverage directory is empty"
             exit 1
           fi
 
           echo "Coverage report(s) found:"
-          find coverage -name "coverage.cobertura.xml" -exec echo {} \;
+          find coverage -name "coverage.opencover.xml" -exec echo {} \;
 
           dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
 
