@@ -6,6 +6,7 @@ export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<{ tagIds?: string[], searchTerm?: string }>({});
 
   const sortPosts = useCallback((items: Post[]) => {
     return [...items].sort(
@@ -18,7 +19,7 @@ export function usePosts() {
   const refresh = useCallback(async () => {
     setError('');
     try {
-      const data = await postsApi.getAll();
+      const data = await postsApi.getAll(1, 50, filter);
       // API returns paginated response with items array
       const normalized: Post[] = data.items && Array.isArray(data.items) ? data.items : [];
       setPosts(sortPosts(normalized));
@@ -27,7 +28,7 @@ export function usePosts() {
     } finally {
       setLoading(false);
     }
-  }, [sortPosts]);
+  }, [sortPosts, filter]);
 
   useEffect(() => {
     refresh();
@@ -143,5 +144,5 @@ export function usePosts() {
     []
   );
 
-  return { posts, loading, error, refresh, create, update, delete: delete_, togglePin, addComment, addImage, removeImage, setError };
+  return { posts, loading, error, refresh, create, update, delete: delete_, togglePin, addComment, addImage, removeImage, setError, setFilter };
 }

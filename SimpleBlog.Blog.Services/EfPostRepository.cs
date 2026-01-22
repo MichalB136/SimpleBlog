@@ -11,16 +11,39 @@ public sealed class EfPostRepository(
     BlogDbContext context,
     IOperationLogger operationLogger) : IPostRepository
 {
-    public async Task<PaginatedResult<Post>> GetAllAsync(int page = 1, int pageSize = 10)
+    public async Task<PaginatedResult<Post>> GetAllAsync(PostFilterRequest? filter = null, int page = 1, int pageSize = 10)
     {
         return await operationLogger.LogQueryPerformanceAsync(
             "GetAllPosts",
             async () =>
             {
-                var total = await context.Posts.CountAsync();
-                var entities = await context.Posts
+                var query = context.Posts
                     .Include(p => p.PostTags)
                         .ThenInclude(pt => pt.Tag)
+                    .AsQueryable();
+
+                // Apply filters
+                if (filter is not null)
+                {
+                    // Filter by tags - if any of the requested tags are in the post's tags
+                    if (filter.TagIds is not null && filter.TagIds.Count > 0)
+                    {
+                        query = query.Where(p => 
+                            p.PostTags.Any(pt => filter.TagIds.Contains(pt.TagId)));
+                    }
+
+                    // Filter by search term (title or content)
+                    if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                    {
+                        var searchTerm = filter.SearchTerm.ToLower();
+                        query = query.Where(p => 
+                            p.Title.ToLower().Contains(searchTerm) || 
+                            p.Content.ToLower().Contains(searchTerm));
+                    }
+                }
+
+                var total = await query.CountAsync();
+                var entities = await query
                     .OrderByDescending(p => p.IsPinned)
                     .ThenByDescending(p => p.CreatedAt)
                     .Skip((page - 1) * pageSize)
@@ -35,7 +58,7 @@ public sealed class EfPostRepository(
                     PageSize = pageSize
                 };
             },
-            new { page, pageSize });
+            new { filter, page, pageSize });
     }
 
     public async Task<Post?> GetByIdAsync(Guid id)
@@ -52,6 +75,26 @@ public sealed class EfPostRepository(
                 return entity is not null ? MapToModel(entity) : null;
             },
             new { PostId = id });
+    }
+
+    public async Task<IReadOnlyList<Post>> GetByTagAsync(Guid tagId)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetPostsByTag",
+            async () =>
+            {
+                var entities = await context.Posts
+                    .Include(p => p.Comments)
+                    .Include(p => p.PostTags)
+                        .ThenInclude(pt => pt.Tag)
+                    .Where(p => p.PostTags.Any(pt => pt.TagId == tagId))
+                    .OrderByDescending(p => p.IsPinned)
+                    .ThenByDescending(p => p.CreatedAt)
+                    .ToListAsync();
+                
+                return entities.Select(MapToModel).ToList();
+            },
+            new { TagId = tagId });
     }
 
     public async Task<Post> CreateAsync(CreatePostRequest request)

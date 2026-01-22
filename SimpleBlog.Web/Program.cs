@@ -13,9 +13,12 @@ if (Environment.GetEnvironmentVariable("PORT") is string port)
 }
 
 // Support for both Aspire service discovery (dev) and external API URL (production/Render)
-var apiBaseUrl = builder.Configuration["Api:BaseUrl"] 
-    ?? Environment.GetEnvironmentVariable("API_BASE_URL")
-    ?? "https+http://apiservice";
+// In dev, prefer explicit localhost URLs to avoid service discovery timeout issues
+var apiBaseUrl = builder.Environment.IsDevelopment()
+    ? (Environment.GetEnvironmentVariable("API_BASE_URL") ?? "http://localhost:5433")
+    : (builder.Configuration["Api:BaseUrl"] 
+        ?? Environment.GetEnvironmentVariable("API_BASE_URL")
+        ?? "https+http://apiservice");
 
 builder.Services.AddHttpClient(ApiConstants.ClientName, client =>
 {

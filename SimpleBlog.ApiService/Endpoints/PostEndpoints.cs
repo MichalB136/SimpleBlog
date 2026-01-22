@@ -56,12 +56,34 @@ public static class PostEndpoints
     }
 
     private static async Task<IResult> GetAll(
+        HttpContext context,
         IPostRepository repository,
         IImageStorageService imageStorage,
+        ILogger<Program> logger,
         int page = 1,
         int pageSize = 10)
     {
-        var result = await repository.GetAllAsync(page, pageSize);
+        // Parse tagIds from query string
+        var tagIds = context.Request.Query["tagIds"]
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => Guid.TryParse(s, out var guid) ? guid : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
+        
+        var searchTerm = context.Request.Query["searchTerm"].FirstOrDefault();
+        
+        logger.LogInformation("GetAll posts: page={Page}, pageSize={PageSize}, tagIds={TagCount}, searchTerm={SearchTerm}", 
+            page, pageSize, tagIds.Count, searchTerm ?? "none");
+        
+        var filter = new PostFilterRequest(
+            tagIds.Count > 0 ? tagIds : null,
+            string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm
+        );
+        
+        var result = await repository.GetAllAsync(filter, page, pageSize);
+        logger.LogInformation("GetAll returned {Count} posts (total: {Total})", result.Items.Count, result.Total);
+        
         var postsWithSignedUrls = result.Items
             .Select(post => GenerateSignedUrlsForPost(post, imageStorage))
             .ToList();

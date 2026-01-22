@@ -3,7 +3,9 @@ import { Header } from '@/components/layout/Header';
 import { Navigation } from '@/components/layout/Navigation';
 import { usePosts } from '@/hooks/usePosts';
 import { PostList } from '@/components/posts/PostList';
+import { PostDetailPage } from '@/components/posts/PostDetailPage';
 import { PostForm } from '@/components/posts/PostForm';
+import { PostSearchBar } from '@/components/posts/PostSearchBar';
 import { AboutPage } from '@/components/common/AboutPage';
 import { ShopPage } from '@/components/shop/ShopPage';
 import { CartPage } from '@/components/shop/CartPage';
@@ -17,7 +19,7 @@ import type { Post } from '@/types/post';
 
 function AppContent() {
   const { user } = useAuth();
-  const { posts, loading, error, delete: deletePost, addComment, togglePin, create, update, addImage, removeImage } = usePosts();
+  const { posts, loading, error, delete: deletePost, addComment, togglePin, create, update, addImage, removeImage, setFilter } = usePosts();
   const navigate = useNavigate();
   const [showPostForm, setShowPostForm] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -86,6 +88,9 @@ function AppContent() {
             </button>
           </div>
         )}
+        
+        <PostSearchBar onSearch={setFilter} />
+        
         <PostList
           posts={posts}
           isAdmin={user?.role === 'Admin'}
@@ -168,6 +173,19 @@ function AppContent() {
         <div className="flex-grow-1">
           <Routes>
             <Route path="/" element={renderHomePage()} />
+            <Route path="/posts/:id" element={
+              <PostDetailPage
+                posts={posts}
+                isAdmin={user?.role === 'Admin'}
+                onDelete={deletePost}
+                onEdit={(post) => {
+                  setEditingPost(post);
+                  setShowPostForm(true);
+                }}
+                onAddComment={addComment}
+                onTogglePin={togglePin}
+              />
+            } />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/shop" element={<ShopPage onViewCart={() => navigate('/cart')} />} />
             <Route path="/cart" element={<CartPage />} />

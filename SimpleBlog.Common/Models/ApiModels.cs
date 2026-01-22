@@ -80,3 +80,15 @@ public record OrderItemRequest(
     Guid ProductId,
     int Quantity
 );
+
+// Filter DTOs
+public record PostFilterRequest(
+    List<Guid>? TagIds,
+    string? SearchTerm
+);
+
+public record ProductFilterRequest(
+    List<Guid>? TagIds,
+    string? Category,
+    string? SearchTerm
+);
