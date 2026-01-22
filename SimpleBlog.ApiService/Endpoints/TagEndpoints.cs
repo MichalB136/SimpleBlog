@@ -39,6 +39,20 @@ public static class TagEndpoints
         .Produces<Tag>()
         .Produces(StatusCodes.Status404NotFound);
 
+        // GET /tags/{id}/posts - Get posts by tag ID
+        tags.MapGet("{id:guid}/posts", async (Guid id, ITagRepository repository, IPostRepository postRepository) =>
+        {
+            var tag = await repository.GetByIdAsync(id);
+            if (tag is null)
+                return Results.NotFound();
+
+            var posts = await postRepository.GetByTagAsync(id);
+            return Results.Ok(new { tag, posts });
+        })
+        .WithName("GetPostsByTag")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound);
+
         // POST /tags - Create new tag
         tags.MapPost("", async (CreateTagRequest request, ITagRepository repository, HttpContext context) =>
         {

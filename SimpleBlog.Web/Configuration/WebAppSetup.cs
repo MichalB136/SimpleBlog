@@ -30,12 +30,15 @@ public static class WebAppSetup
             throw new InvalidOperationException(
                 "Vite:DevServerUrl must be configured in appsettings.Development.json");
         }
-        
-        using var viteHttpClient = new HttpClient
+
+        // Keep a single HttpClient alive for proxying to Vite; dispose on shutdown.
+        var viteHttpClient = new HttpClient
         {
             BaseAddress = new Uri(viteUrl),
             Timeout = TimeSpan.FromSeconds(ViteTimeoutSeconds)
         };
+
+        app.Lifetime.ApplicationStopped.Register(() => viteHttpClient.Dispose());
 
         app.Use(async (context, next) =>
         {
@@ -177,8 +180,14 @@ public static class WebAppSetup
     private static void MapPostEndpoints(RouteGroupBuilder api)
     {
         api.MapGet(EndpointPaths.Posts,
-            async (IHttpClientFactory factory, ILogger<Program> logger) =>
-                await ApiProxyHelper.ProxyGetRequest(factory, EndpointPaths.Posts, logger));
+            async (HttpContext context, IHttpClientFactory factory, ILogger<Program> logger) =>
+            {
+                var queryString = context.Request.QueryString.ToString();
+                var path = queryString.Length > 0 
+                    ? $"{EndpointPaths.Posts}{queryString}"
+                    : EndpointPaths.Posts;
+                return await ApiProxyHelper.ProxyGetRequest(factory, path, logger);
+            });
 
         api.MapGet("/posts/{id:guid}",
             async (Guid id, IHttpClientFactory factory, ILogger<Program> logger) =>
@@ -238,8 +247,14 @@ public static class WebAppSetup
     private static void MapTagEndpoints(RouteGroupBuilder api)
     {
         api.MapGet(EndpointPaths.Tags,
-            async (IHttpClientFactory factory, ILogger<Program> logger) =>
-                await ApiProxyHelper.ProxyGetRequest(factory, EndpointPaths.Tags, logger));
+            async (HttpContext context, IHttpClientFactory factory, ILogger<Program> logger) =>
+            {
+                var queryString = context.Request.QueryString.ToString();
+                var path = queryString.Length > 0 
+                    ? $"{EndpointPaths.Tags}{queryString}"
+                    : EndpointPaths.Tags;
+                return await ApiProxyHelper.ProxyGetRequest(factory, path, logger);
+            });
 
         api.MapGet("/tags/{id:guid}",
             async (Guid id, IHttpClientFactory factory, ILogger<Program> logger) =>
@@ -265,8 +280,14 @@ public static class WebAppSetup
     private static void MapProductEndpoints(RouteGroupBuilder api)
     {
         api.MapGet(EndpointPaths.Products,
-            async (IHttpClientFactory factory, ILogger<Program> logger) =>
-                await ApiProxyHelper.ProxyGetRequest(factory, EndpointPaths.Products, logger));
+            async (HttpContext context, IHttpClientFactory factory, ILogger<Program> logger) =>
+            {
+                var queryString = context.Request.QueryString.ToString();
+                var path = queryString.Length > 0 
+                    ? $"{EndpointPaths.Products}{queryString}"
+                    : EndpointPaths.Products;
+                return await ApiProxyHelper.ProxyGetRequest(factory, path, logger);
+            });
 
         api.MapGet("/products/{id:guid}",
             async (Guid id, IHttpClientFactory factory, ILogger<Program> logger) =>

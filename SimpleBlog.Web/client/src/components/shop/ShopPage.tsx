@@ -1,15 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/hooks/useCart';
+import { ProductSearchBar } from './ProductSearchBar';
+import { TagBadges } from '@/components/common/TagSelector';
 
 interface ShopPageProps {
   onViewCart?: () => void;
 }
 
 export function ShopPage({ onViewCart }: ShopPageProps) {
-  const { products, loading, error } = useProducts();
+  const { products, loading, error, setFilter } = useProducts();
   const { addItem, itemCount } = useCart();
   const [addedProduct, setAddedProduct] = useState<string | null>(null);
+
+  // Extract unique categories
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category).filter((c): c is string => !!c))];
+    return uniqueCategories.sort();
+  }, [products]);
 
   const handleAddToCart = (product: any) => {
     addItem(product, 1);
@@ -21,15 +29,6 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
 
   if (loading) return <p className="text-muted">Ładowanie...</p>;
   if (error) return <div className="alert alert-danger">{error}</div>;
-
-  if (products.length === 0) {
-    return (
-      <div className="alert alert-info">
-        <i className="bi bi-info-circle me-2"></i>
-        Brak produktów w sklepie.
-      </div>
-    );
-  }
 
   return (
     <>
@@ -48,6 +47,15 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
           </button>
         )}
       </div>
+
+      <ProductSearchBar onSearch={setFilter} categories={categories} />
+
+      {products.length === 0 ? (
+        <div className="alert alert-info">
+          <i className="bi bi-info-circle me-2"></i>
+          Brak produktów spełniających kryteria.
+        </div>
+      ) : (
       <div className="row g-4">
         {products.map((product) => (
           <div key={product.id} className="col-md-6 col-lg-4">
@@ -67,6 +75,11 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
               )}
               <div className="card-body d-flex flex-column">
                 <h5 className="card-title">{product.name}</h5>
+                {product.tags && product.tags.length > 0 && (
+                  <div className="mb-2">
+                    <TagBadges tags={product.tags} />
+                  </div>
+                )}
                 <p className="card-text text-muted flex-grow-1">
                   {product.description.substring(0, 80)}...
                 </p>
@@ -91,6 +104,7 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
           </div>
         ))}
       </div>
+      )}
     </>
   );
 }

@@ -6,11 +6,12 @@ export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState<{ tagIds?: string[], category?: string, searchTerm?: string }>({});
 
   const refresh = useCallback(async () => {
     setError('');
     try {
-      const data = await productsApi.getAll();
+      const data = await productsApi.getAll(1, 50, filter);
       // API returns paginated response with items array
       setProducts(data.items && Array.isArray(data.items) ? data.items : []);
     } catch (err) {
@@ -18,7 +19,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     refresh();
@@ -69,5 +70,5 @@ export function useProducts() {
     []
   );
 
-  return { products, loading, error, refresh, create, update, delete: delete_, setError };
+  return { products, loading, error, refresh, create, update, delete: delete_, setError, setFilter };
 }

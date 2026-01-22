@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using SimpleBlog.ApiService;
 using SimpleBlog.Common;
 using SimpleBlog.Common.Logging;
@@ -32,10 +33,30 @@ public static class ProductEndpoints
     }
 
     private static async Task<IResult> GetAll(
+        HttpContext context,
         IProductRepository repository,
         int page = 1,
-        int pageSize = 10) =>
-        Results.Ok(await repository.GetAllAsync(page, pageSize));
+        int pageSize = 10)
+    {
+        // Parse tagIds from query string
+        var tagIds = context.Request.Query["tagIds"]
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => Guid.TryParse(s, out var guid) ? guid : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
+        
+        var category = context.Request.Query["category"].FirstOrDefault();
+        var searchTerm = context.Request.Query["searchTerm"].FirstOrDefault();
+        
+        var filter = new ProductFilterRequest(
+            tagIds.Count > 0 ? tagIds : null,
+            string.IsNullOrWhiteSpace(category) ? null : category,
+            string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm
+        );
+        
+        return Results.Ok(await repository.GetAllAsync(filter, page, pageSize));
+    }
 
     private static async Task<IResult> GetById(Guid id, IProductRepository repository)
     {

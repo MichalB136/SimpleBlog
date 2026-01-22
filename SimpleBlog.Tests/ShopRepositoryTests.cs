@@ -48,7 +48,7 @@ public sealed class ShopRepositoryTests
         context.SaveChanges();
 
         // Act
-        var result = await repository.GetAllAsync(1, 10);
+        var result = await repository.GetAllAsync(null, 1, 10);
 
         // Assert
         Assert.Equal(2, result.Total);

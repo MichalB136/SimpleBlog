@@ -4,8 +4,9 @@ namespace SimpleBlog.Common.Interfaces;
 
 public interface IPostRepository
 {
-    Task<PaginatedResult<Post>> GetAllAsync(int page = 1, int pageSize = 10);
+    Task<PaginatedResult<Post>> GetAllAsync(PostFilterRequest? filter = null, int page = 1, int pageSize = 10);
     Task<Post?> GetByIdAsync(Guid id);
+    Task<IReadOnlyList<Post>> GetByTagAsync(Guid tagId);
     Task<Post> CreateAsync(CreatePostRequest request);
     Task<Post?> UpdateAsync(Guid id, UpdatePostRequest request);
     Task<bool> DeleteAsync(Guid id);
@@ -39,7 +40,7 @@ public interface IAboutMeRepository
 
 public interface IProductRepository
 {
-    Task<PaginatedResult<Product>> GetAllAsync(int page = 1, int pageSize = 10);
+    Task<PaginatedResult<Product>> GetAllAsync(ProductFilterRequest? filter = null, int page = 1, int pageSize = 10);
     Task<Product?> GetByIdAsync(Guid id);
     Task<Product> CreateAsync(CreateProductRequest request);
     Task<Product?> UpdateAsync(Guid id, UpdateProductRequest request);

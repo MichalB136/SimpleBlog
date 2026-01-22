@@ -11,16 +11,44 @@ public sealed class EfProductRepository(
     ShopDbContext context,
     IOperationLogger operationLogger) : IProductRepository
 {
-    public async Task<PaginatedResult<Product>> GetAllAsync(int page = 1, int pageSize = 10)
+    public async Task<PaginatedResult<Product>> GetAllAsync(ProductFilterRequest? filter = null, int page = 1, int pageSize = 10)
     {
         return await operationLogger.LogQueryPerformanceAsync(
             "GetAllProducts",
             async () =>
             {
-                var total = await context.Products.CountAsync();
-                var entities = await context.Products
+                var query = context.Products
                     .Include(p => p.ProductTags)
                         .ThenInclude(pt => pt.Tag)
+                    .AsQueryable();
+
+                // Apply filters
+                if (filter is not null)
+                {
+                    // Filter by tags
+                    if (filter.TagIds is not null && filter.TagIds.Count > 0)
+                    {
+                        query = query.Where(p => p.ProductTags.Any(pt => filter.TagIds.Contains(pt.TagId)));
+                    }
+
+                    // Filter by category
+                    if (!string.IsNullOrWhiteSpace(filter.Category))
+                    {
+                        query = query.Where(p => p.Category.ToLower() == filter.Category.ToLower());
+                    }
+
+                    // Filter by search term (name or description)
+                    if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                    {
+                        var searchTerm = filter.SearchTerm.ToLower();
+                        query = query.Where(p => 
+                            p.Name.ToLower().Contains(searchTerm) || 
+                            p.Description.ToLower().Contains(searchTerm));
+                    }
+                }
+
+                var total = await query.CountAsync();
+                var entities = await query
                     .OrderByDescending(p => p.CreatedAt)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
@@ -34,7 +62,7 @@ public sealed class EfProductRepository(
                     PageSize = pageSize
                 };
             },
-            new { page, pageSize });
+            new { filter, page, pageSize });
     }
 
     public async Task<Product?> GetByIdAsync(Guid id)
