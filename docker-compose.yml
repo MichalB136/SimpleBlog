@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -18,6 +20,54 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - simpleblog-network
+
+  apiserver:
+    build:
+      context: .
+      dockerfile: SimpleBlog.ApiService/Dockerfile
+    image: simpleblog-apiserver:compose
+    container_name: simpleblog-apiserver
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:5433:8080"
+    environment:
+      - PORT=8080
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - SimpleBlog_ConnectionStrings__blogdb=Host=postgres;Port=5432;Database=simpleblog;Username=simpleblog_user;Password=simpleblog_dev_password_123
+      - SimpleBlog_Cloudinary__ApiKey=${SimpleBlog_Cloudinary__ApiKey}
+      - SimpleBlog_Cloudinary__ApiSecret=${SimpleBlog_Cloudinary__ApiSecret}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - simpleblog-network
+
+  web:
+    build:
+      context: .
+      dockerfile: SimpleBlog.Web/Dockerfile
+    image: simpleblog-web:compose
+    container_name: simpleblog-web
+    restart: unless-stopped
+    depends_on:
+      apiserver:
+        condition: service_healthy
+    environment:
+      - PORT=8080
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - API_BASE_URL=http://simpleblog-apiserver:8080
+      - VITE_API_BASE_URL=http://simpleblog-apiserver:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "0.0.0.0:5175:8080"
     networks:
       - simpleblog-network
 

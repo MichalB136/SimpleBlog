@@ -6,9 +6,9 @@ możliwość dodania zdjęć - DONE
 możliwość lupki do postów i sklepu (filtr) - DONE
 dodać tagi do wpisow i do sklepu - DONE
 posty zdjecie po lewej (pelne) wpis pop rawej - DONE
-Twoje zamówienie musi być zaakceptowane (wording) + Płatność drogą mailową
-Kontakt (ogarnij SMP)
-JWT token wygasanie bez aktywnosci
-kompatybilna z telefonem
-analitka dla administratora
+Twoje zamówienie musi być zaakceptowane (wording) + Płatność drogą mailową - DONE
+Kontakt (ogarnij SMP) - wymaga domeny
+JWT token wygasanie bez aktywnosci - Done
+kompatybilna z telefonem - done
+analitka dla administratora - partailly not tested
 ankieta do wyboru materiału

@@ -7,6 +7,9 @@ public record User(string Username, string Email, string Role);
 public record LoginRequest(string Username, string Password);
 public record RegisterRequest(string Username, string Email, string Password);
 public record RegisterResponse(bool Success, string? Message);
+// Refresh token requests
+public record RefreshRequest(string RefreshToken);
+public record RevokeRequest(string RefreshToken);
 
 // Post DTOs
 public record CreatePostRequest(

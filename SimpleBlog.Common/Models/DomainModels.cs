@@ -68,3 +68,9 @@ public record OrderItem(
     decimal Price,
     int Quantity
 );
+
+public record TopProduct(
+    Guid ProductId,
+    string ProductName,
+    long Count
+);

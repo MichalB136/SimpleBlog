@@ -10,13 +10,16 @@ internal sealed class IdentityUserRepository : IUserRepository
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<IdentityUserRepository> _logger;
+    private readonly ApplicationDbContext _db;
 
     public IdentityUserRepository(
         UserManager<ApplicationUser> userManager,
-        ILogger<IdentityUserRepository> logger)
+        ILogger<IdentityUserRepository> logger,
+        ApplicationDbContext db)
     {
         _userManager = userManager;
         _logger = logger;
+        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     public async Task<User?> ValidateUserAsync(string username, string password)
@@ -80,5 +83,53 @@ internal sealed class IdentityUserRepository : IUserRepository
 
         _logger.LogInformation("User {Username} registered successfully", username);
         return (true, null);
+    }
+
+    public async Task SaveRefreshTokenAsync(string username, string refreshToken, DateTime expiresUtc)
+    {
+        var user = await _userManager.FindByNameAsync(username);
+        if (user is null) return;
+
+        var token = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            Token = refreshToken,
+            UserId = user.Id,
+            ExpiresUtc = expiresUtc,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        _db.RefreshTokens.Add(token);
+        await _db.SaveChangesAsync();
+    }
+
+    public Task<string?> GetUsernameByRefreshTokenAsync(string refreshToken)
+    {
+        var token = _db.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
+        if (token is null) return Task.FromResult<string?>(null);
+        if (token.RevokedUtc is not null) return Task.FromResult<string?>(null);
+        if (token.ExpiresUtc <= DateTime.UtcNow) return Task.FromResult<string?>(null);
+
+        var user = _userManager.FindByIdAsync(token.UserId.ToString());
+        if (user is null) return Task.FromResult<string?>(null);
+
+        return user.ContinueWith(t => t.Result?.UserName, TaskContinuationOptions.OnlyOnRanToCompletion);
+    }
+
+    public async Task RevokeRefreshTokenAsync(string refreshToken)
+    {
+        var token = _db.RefreshTokens.FirstOrDefault(t => t.Token == refreshToken);
+        if (token is null) return;
+        token.RevokedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<User?> GetUserByUsernameAsync(string username)
+    {
+        var user = await _userManager.FindByNameAsync(username);
+        if (user is null) return null;
+        var roles = await _userManager.GetRolesAsync(user);
+        var role = roles.FirstOrDefault() ?? "User";
+        return new User(user.UserName ?? username, user.Email ?? string.Empty, role);
     }
 }

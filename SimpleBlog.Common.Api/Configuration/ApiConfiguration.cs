@@ -8,6 +8,8 @@ public class EndpointConfiguration
 {
     public string Login { get; set; } = "/login";
     public string Register { get; set; } = "/register";
+    public string Refresh { get; set; } = "/refresh";
+    public string Revoke { get; set; } = "/revoke";
     public PostsEndpoints Posts { get; set; } = new();
     public AboutMeEndpoints AboutMe { get; set; } = new();
     public ProductsEndpoints Products { get; set; } = new();
@@ -79,4 +81,5 @@ public class AuthorizationConfiguration
     public bool RequireAdminForProductDelete { get; set; } = true;
     public bool RequireAdminForOrderView { get; set; } = true;
     public int TokenExpirationHours { get; set; } = 8;
+    public int RefreshTokenExpirationDays { get; set; } = 30;
 }

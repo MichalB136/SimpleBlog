@@ -40,9 +40,24 @@ static void ConfigureConfiguration(WebApplicationBuilder builder)
 
 static void ConfigureHosting(WebApplicationBuilder builder)
 {
-    if (Environment.GetEnvironmentVariable("PORT") is string port && int.TryParse(port, out var parsedPort))
+    // Prefer Aspire-provided PORT env var so AppHost/App orchestrator controls mapping.
+    var envPort = Environment.GetEnvironmentVariable("PORT");
+    if (!string.IsNullOrWhiteSpace(envPort) && int.TryParse(envPort, out var parsedPort))
     {
         builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(parsedPort));
+        return;
+    }
+
+    // Fallback to port configuration from appsettings (centralized). If present, bind Kestrel accordingly.
+    var configHttp = builder.Configuration["Ports:ApiService:Http"];
+    var configHttps = builder.Configuration["Ports:ApiService:Https"];
+    if (int.TryParse(configHttp, out var cfgHttp))
+    {
+        builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(cfgHttp));
+    }
+    if (int.TryParse(configHttps, out var cfgHttps))
+    {
+        builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(cfgHttps, listenOptions => listenOptions.UseHttps()));
     }
 }
 
@@ -86,7 +101,6 @@ static void ConfigurePipeline(WebApplication app, (string Issuer, string Audienc
     app.UseAuthorization();
 
     var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
-    app.MapHealthChecks(endpointConfig.Health);
     app.MapAuthEndpoints(jwtParameters.Issuer, jwtParameters.Audience, jwtParameters.Key);
     app.MapPostEndpoints();
     app.MapAboutMeEndpoints();

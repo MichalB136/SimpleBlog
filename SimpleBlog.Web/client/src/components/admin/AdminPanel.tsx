@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { useAuth } from '@/context/AuthContext';
 import { TagManagement } from './TagManagement';
 import { ProductManagement } from './ProductManagement';
 
-type AdminTab = 'site' | 'tags' | 'products';
+type AdminTab = 'site' | 'tags' | 'products' | 'analytics';
 
-export function AdminPanel() {
+const Analytics = React.lazy(() => import('./Analytics').then((m) => ({ default: m.Analytics })));
+
+export function AdminPanel({ showTitle = true }: { showTitle?: boolean }) {
   const { user } = useAuth();
   const { settings, availableThemes, loading, updateTheme, uploadLogo, deleteLogo } = useSiteSettings();
   const [selectedTheme, setSelectedTheme] = useState('');
@@ -360,10 +362,12 @@ export function AdminPanel() {
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">
-        <i className="bi bi-gear me-2" aria-hidden="true"></i>{' '}
-        Panel Administratora
-      </h2>
+      {showTitle && (
+        <h2 className="mb-4">
+          <i className="bi bi-gear me-2" aria-hidden="true"></i>{' '}
+          Panel Administratora
+        </h2>
+      )}
 
       {/* Tabs Navigation */}
       <ul className="nav nav-tabs mb-4" role="tablist">
@@ -403,11 +407,29 @@ export function AdminPanel() {
             Produkty
           </button>
         </li>
+        <li className="nav-item" role="presentation">
+          <button
+            className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'analytics'}
+          >
+            <i className="bi bi-bar-chart me-2" aria-hidden="true"></i>{' '}
+            Analityka
+          </button>
+        </li>
       </ul>
 
       {/* Tab Content */}
       {activeTab === 'tags' && <TagManagement />}
       {activeTab === 'products' && <ProductManagement />}
+      {activeTab === 'analytics' && (
+        // Lazy-load Analytics component to keep bundle small
+        <React.Suspense fallback={<div>Ładowanie...</div>}>
+          <Analytics />
+        </React.Suspense>
+      )}
       {activeTab === 'site' && renderSiteTab()}
     </div>
   );

@@ -27,7 +27,7 @@ public static class CloudinarySetup
         }
         else
         {
-            // Fallback to individual settings
+                // Fallback to individual settings
             var cloudName = configuration["Cloudinary:CloudName"];
             var apiKey = configuration["Cloudinary:ApiKey"];
             var apiSecret = configuration["Cloudinary:ApiSecret"];
@@ -45,6 +45,11 @@ public static class CloudinarySetup
             }
             else
             {
+                // Register a no-op image storage so endpoints that accept image operations
+                // can still be invoked (they will be no-ops). This prevents the endpoint
+                // discovery from inferring body parameters when the service is missing.
+                services.AddScoped<IImageStorageService, NoOpImageStorageService>();
+
                 return new Result(false,
                     "Cloudinary not configured. Image upload features will not be available. " +
                     "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +

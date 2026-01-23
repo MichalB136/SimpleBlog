@@ -13,6 +13,7 @@ public class ShopDbContext : DbContext
     public DbSet<OrderItemEntity> OrderItems { get; set; } = null!;
     public DbSet<TagEntity> Tags { get; set; } = null!;
     public DbSet<ProductTagEntity> ProductTags { get; set; } = null!;
+    public DbSet<ProductViewEntity> ProductViews { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,6 +68,14 @@ public class ShopDbContext : DbContext
             entity.HasKey(e => new { e.ProductId, e.TagId });
             entity.HasOne(e => e.Product).WithMany(p => p.ProductTags).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Tag).WithMany(t => t.ProductTags).HasForeignKey(e => e.TagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductViewEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProductId).IsRequired();
+            entity.Property(e => e.ViewedAt).IsRequired();
+            entity.HasIndex(e => e.ProductId);
         });
     }
 }

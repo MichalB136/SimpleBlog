@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Post } from '@/types/post';
 import { TagBadges } from '@/components/common/TagSelector';
 import { CommentForm } from './CommentForm';
+import { buildResponsiveProps, appendWidth } from '@/utils/image';
 
 interface PostListProps {
   posts: Post[];
@@ -48,25 +49,34 @@ export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTog
                       <div
                         className="position-absolute w-100 h-100"
                         style={{
-                          backgroundImage: `url(${post.imageUrls[0]})`,
+                          backgroundImage: `url(${appendWidth(post.imageUrls[0], 400)})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                           filter: 'blur(20px)',
                           transform: 'scale(1.1)'
                         }}
                       />
-                      {/* Main image */}
-                      <img
-                        src={post.imageUrls[0]}
-                        className="position-relative img-fluid"
-                        style={{
-                          height: '300px',
-                          width: '100%',
-                          objectFit: 'contain',
-                          zIndex: 1
-                        }}
-                        alt={post.title}
-                      />
+                      {/* Main image with responsive srcset */}
+                      {
+                        (() => {
+                          const { src, srcSet, sizes } = buildResponsiveProps(post.imageUrls[0]);
+                          return (
+                            <img
+                              src={src}
+                              srcSet={srcSet}
+                              sizes={sizes}
+                              className="position-relative img-fluid"
+                              style={{
+                                height: '300px',
+                                width: '100%',
+                                objectFit: 'contain',
+                                zIndex: 1
+                              }}
+                              alt={post.title}
+                            />
+                          );
+                        })()
+                      }
                     </div>
                   ) : (
                     <div
@@ -227,7 +237,7 @@ export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTog
                               <div
                                 className="position-absolute w-100 h-100"
                                 style={{
-                                  backgroundImage: `url(${url})`,
+                                  backgroundImage: `url(${appendWidth(url, 400)})`,
                                   backgroundSize: 'cover',
                                   backgroundPosition: 'center',
                                   filter: 'blur(20px)',
@@ -235,17 +245,26 @@ export function PostList({ posts, isAdmin, onDelete, onEdit, onAddComment, onTog
                                 }}
                               />
                               {/* Main image */}
-                              <img
-                                src={url}
-                                className="position-relative img-fluid"
-                                style={{ 
-                                  height: '300px',
-                                  width: '100%',
-                                  objectFit: 'contain',
-                                  zIndex: 1
-                                }}
-                                alt={`${selectedPost.title} - zdjęcie ${index + 1}`}
-                              />
+                              {
+                                (() => {
+                                  const { src, srcSet, sizes } = buildResponsiveProps(url);
+                                  return (
+                                    <img
+                                      src={src}
+                                      srcSet={srcSet}
+                                      sizes={sizes}
+                                      className="position-relative img-fluid"
+                                      style={{ 
+                                        height: '300px',
+                                        width: '100%',
+                                        objectFit: 'contain',
+                                        zIndex: 1
+                                      }}
+                                      alt={`${selectedPost.title} - zdjęcie ${index + 1}`}
+                                    />
+                                  );
+                                })()
+                              }
                             </div>
                           ))}
                         </div>

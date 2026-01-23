@@ -60,11 +60,6 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
         {products.map((product) => (
           <div key={product.id} className="col-md-6 col-lg-4">
             <div className="card shadow-sm h-100 position-relative">
-              {addedProduct === product.id && (
-                <div className="position-absolute top-0 start-50 translate-middle-x mt-2 alert alert-success alert-sm py-1 px-2" style={{ fontSize: '0.85rem' }}>
-                  <i className="bi bi-check-circle me-1"></i>Dodano do koszyka!
-                </div>
-              )}
               {product.imageUrl && (
                 <img
                   src={product.imageUrl}
@@ -74,6 +69,11 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
                 />
               )}
               <div className="card-body d-flex flex-column">
+                {addedProduct === product.id && (
+                  <div role="status" aria-live="polite" className="alert alert-success alert-sm py-1 px-2 mb-2 w-100 text-center" style={{ fontSize: '0.9rem' }}>
+                    <i className="bi bi-check-circle me-1"></i>Dodano do koszyka!
+                  </div>
+                )}
                 <h5 className="card-title">{product.name}</h5>
                 {product.tags && product.tags.length > 0 && (
                   <div className="mb-2">

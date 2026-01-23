@@ -48,6 +48,11 @@ public interface IProductRepository
     
     // Tag management
     Task<Product?> AssignTagsAsync(Guid productId, List<Guid> tagIds);
+
+    // Analytics
+    Task RecordViewAsync(Guid productId, string? userId = null, string? sessionId = null);
+    Task<IReadOnlyList<TopProduct>> GetTopSoldProductsAsync(DateTime? from = null, DateTime? to = null, int limit = 10);
+    Task<IReadOnlyList<TopProduct>> GetTopViewedProductsAsync(DateTime? from = null, DateTime? to = null, int limit = 10);
 }
 
 public interface IOrderRepository
@@ -61,6 +66,10 @@ public interface IUserRepository
 {
     Task<User?> ValidateUserAsync(string username, string password);
     Task<(bool Success, string? ErrorMessage)> RegisterAsync(string username, string email, string password);
+    Task SaveRefreshTokenAsync(string username, string refreshToken, DateTime expiresUtc);
+    Task<string?> GetUsernameByRefreshTokenAsync(string refreshToken);
+    Task RevokeRefreshTokenAsync(string refreshToken);
+    Task<User?> GetUserByUsernameAsync(string username);
 }
 
 public interface ISiteSettingsRepository

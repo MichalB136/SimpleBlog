@@ -58,3 +58,12 @@ public class OrderItemEntity
     public int Quantity { get; set; }
     public OrderEntity? Order { get; set; }
 }
+
+public class ProductViewEntity
+{
+    public Guid Id { get; set; }
+    public Guid ProductId { get; set; }
+    public DateTimeOffset ViewedAt { get; set; }
+    public string? UserId { get; set; }
+    public string? SessionId { get; set; }
+}

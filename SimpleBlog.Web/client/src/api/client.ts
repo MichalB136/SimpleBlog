@@ -31,7 +31,15 @@ async function apiRequest<T>(
 
   const contentType = response.headers.get('content-type');
   const isJson = contentType?.includes('application/json');
-  const data = isJson ? await response.json() : await response.text();
+  let data: any;
+  if (isJson) {
+    // Defensive: some endpoints may return an empty body with a JSON content-type.
+    // Read as text first and parse only if non-empty to avoid "Unexpected end of JSON input".
+    const text = await response.text();
+    data = text && text.trim().length > 0 ? JSON.parse(text) : null;
+  } else {
+    data = await response.text();
+  }
 
   if (!response.ok) {
     const errorMessage = typeof data === 'string' ? data : data?.title || 'An error occurred';

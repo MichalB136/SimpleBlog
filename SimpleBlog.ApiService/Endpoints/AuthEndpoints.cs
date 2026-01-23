@@ -62,8 +62,70 @@ public static class AuthEndpoints
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
+            // Generate refresh token
+            var refreshToken = GenerateRefreshToken();
+            var refreshExpires = DateTime.UtcNow.AddDays(authConfig.RefreshTokenExpirationDays);
+            await userRepo.SaveRefreshTokenAsync(user.Username, refreshToken, refreshExpires);
+
             logger.LogInformation("Successful login for user: {Username}, Token length: {TokenLength}", user.Username, tokenString.Length);
-            return Results.Ok(new { token = tokenString, username = user.Username, role = user.Role });
+            return Results.Ok(new { token = tokenString, refreshToken, username = user.Username, role = user.Role });
+        });
+
+        app.MapPost(endpointConfig.Refresh, async (
+            RefreshRequest request,
+            IUserRepository userRepo,
+            ILogger<Program> logger) =>
+        {
+            var oldToken = request.RefreshToken;
+            var username = await userRepo.GetUsernameByRefreshTokenAsync(oldToken);
+            if (username is null)
+            {
+                logger.LogWarning("Invalid or expired refresh token provided");
+                return Results.Unauthorized();
+            }
+
+            var user = await userRepo.GetUserByUsernameAsync(username);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // Create new access token
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
+                }),
+                Expires = DateTime.UtcNow.AddHours(authConfig.TokenExpirationHours),
+                Issuer = jwtIssuer,
+                Audience = jwtAudience,
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtKey), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var newToken = tokenHandler.CreateToken(tokenDescriptor);
+            var newTokenString = tokenHandler.WriteToken(newToken);
+
+            // Rotate refresh token: revoke old, save new
+            await userRepo.RevokeRefreshTokenAsync(oldToken);
+            var newRefresh = GenerateRefreshToken();
+            var refreshExpires = DateTime.UtcNow.AddDays(authConfig.RefreshTokenExpirationDays);
+            await userRepo.SaveRefreshTokenAsync(user.Username, newRefresh, refreshExpires);
+
+            logger.LogInformation("Refresh token rotated for user {Username}", user.Username);
+            return Results.Ok(new { token = newTokenString, refreshToken = newRefresh, username = user.Username, role = user.Role });
+        });
+
+        app.MapPost(endpointConfig.Revoke, async (
+            RevokeRequest request,
+            IUserRepository userRepo,
+            ILogger<Program> logger) =>
+        {
+            await userRepo.RevokeRefreshTokenAsync(request.RefreshToken);
+            logger.LogInformation("Refresh token revoked");
+            return Results.Ok();
         });
 
         app.MapPost(endpointConfig.Register, async (
@@ -92,5 +154,14 @@ public static class AuthEndpoints
             logger.LogInformation("Successful registration for user: {Username}", request.Username);
             return Results.Created(endpointConfig.Register, new RegisterResponse(true, "Registration successful"));
         });
+
+    }
+
+    private static string GenerateRefreshToken()
+    {
+        var randomBytes = new byte[64];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes);
     }
 }

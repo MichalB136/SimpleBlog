@@ -2,11 +2,8 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/client
 
-# Copy package files
-COPY SimpleBlog.Web/client/package*.json ./
-COPY SimpleBlog.Web/client/tsconfig*.json ./
-COPY SimpleBlog.Web/client/vite.config.ts ./
-COPY SimpleBlog.Web/client/index.html ./
+# Copy the entire client source (package.json, src, public, config files)
+COPY SimpleBlog.Web/client/ ./
 
 # Install dependencies and build
 RUN npm ci && npm run build
@@ -19,6 +16,7 @@ WORKDIR /src
 COPY SimpleBlog.sln .
 COPY SimpleBlog.Web/SimpleBlog.Web.csproj SimpleBlog.Web/
 COPY SimpleBlog.ServiceDefaults/SimpleBlog.ServiceDefaults.csproj SimpleBlog.ServiceDefaults/
+COPY SimpleBlog.Common/SimpleBlog.Common.csproj SimpleBlog.Common/
 
 # Restore dependencies
 RUN dotnet restore SimpleBlog.Web/SimpleBlog.Web.csproj
@@ -26,9 +24,10 @@ RUN dotnet restore SimpleBlog.Web/SimpleBlog.Web.csproj
 # Copy source code
 COPY SimpleBlog.Web/ SimpleBlog.Web/
 COPY SimpleBlog.ServiceDefaults/ SimpleBlog.ServiceDefaults/
+COPY SimpleBlog.Common/ SimpleBlog.Common/
 
-# Copy frontend build output to wwwroot/dist
-COPY --from=frontend-build /app/client/dist SimpleBlog.Web/wwwroot/dist
+# Copy frontend build output to wwwroot/dist (Vite configured to emit to ../wwwroot/dist)
+COPY --from=frontend-build /app/wwwroot/dist SimpleBlog.Web/wwwroot/dist
 
 # Build and publish
 WORKDIR /src/SimpleBlog.Web

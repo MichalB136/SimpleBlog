@@ -5,11 +5,18 @@ using SimpleBlog.Common.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+// Ensure ProblemDetails is registered so UseExceptionHandler() works in Production
+builder.Services.AddProblemDetails();
 
-// Configure Kestrel to bind to Render's PORT environment variable if present
-if (Environment.GetEnvironmentVariable("PORT") is string port)
+// Configure Kestrel/URLs using centralized appsettings Ports. Fall back to env PORT only if missing.
+var webPortConfig = builder.Configuration["Ports:Web:Http"];
+if (int.TryParse(webPortConfig, out var webPort))
 {
-    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{webPort}");
+}
+else if (Environment.GetEnvironmentVariable("PORT") is string envPort)
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{envPort}");
 }
 
 // Support for both Aspire service discovery (dev) and external API URL (production/Render)
@@ -17,8 +24,7 @@ if (Environment.GetEnvironmentVariable("PORT") is string port)
 var apiBaseUrl = builder.Environment.IsDevelopment()
     ? (Environment.GetEnvironmentVariable("API_BASE_URL") ?? "http://localhost:5433")
     : (builder.Configuration["Api:BaseUrl"] 
-        ?? Environment.GetEnvironmentVariable("API_BASE_URL")
-        ?? "https+http://apiservice");
+        ?? Environment.GetEnvironmentVariable("API_BASE_URL"));
 
 builder.Services.AddHttpClient(ApiConstants.ClientName, client =>
 {

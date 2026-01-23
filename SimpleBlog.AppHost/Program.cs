@@ -1,15 +1,24 @@
 using CommunityToolkit.Aspire.Hosting.NodeJS;
 
 var builder = DistributedApplication.CreateBuilder(args);
-
+// Read API service port from shared appsettings or fall back to env PORT or default 5433
+var apiPortConfig = builder.Configuration["Ports:ApiService:Http"];
+int apiPort;
+if (!int.TryParse(apiPortConfig, out apiPort))
+{
+    if (!int.TryParse(Environment.GetEnvironmentVariable("PORT"), out apiPort))
+    {
+        apiPort = 5433;
+    }
+}
 // PostgreSQL database is managed externally via docker-compose
 // User must run: docker-compose up -d
 // Before starting the application
 
+// Use configured port from shared appsettings so ports are managed centrally
 var apiService = builder.AddProject<Projects.SimpleBlog_ApiService>("apiservice")
-    .WithHttpEndpoint(port: 5433, name: "apiservice-http", env: "PORT")
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development");
-
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+    .WithHttpEndpoint(port: apiPort, name: "apiservice-http", env: "PORT");
 // Vite dev server orchestrated by Aspire (always available for dev; ignored in publish)
 var viteApp = builder.AddViteApp("vite", "../SimpleBlog.Web/client")
     .WithNpmPackageInstallation()

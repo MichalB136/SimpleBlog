@@ -9,6 +9,7 @@ import { PostSearchBar } from '@/components/posts/PostSearchBar';
 import { AboutPage } from '@/components/common/AboutPage';
 import { ShopPage } from '@/components/shop/ShopPage';
 import { CartPage } from '@/components/shop/CartPage';
+import { CheckoutPage } from '@/components/shop/CheckoutPage';
 import { ContactPage } from '@/components/common/ContactPage';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
@@ -189,6 +190,7 @@ function AppContent() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/shop" element={<ShopPage onViewCart={() => navigate('/cart')} />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/settings" element={
               user?.role === 'Admin' ? (
@@ -206,7 +208,7 @@ function AppContent() {
                       Powrót
                     </button>
                   </div>
-                  <AdminPanel />
+                  <AdminPanel showTitle={false} />
                 </div>
               ) : (
                 <Navigate to="/" replace />

@@ -38,17 +38,17 @@ export function PostForm({ post, onSubmit, onCancel, onAddImage, onRemoveImage }
       setSelectedTagIds([]);
     }
     setError('');
-    
-    // Cleanup preview URLs
+
+    // Revoke any existing preview URLs and clear selected files when the form is (re)initialized.
     previewUrls.forEach(url => URL.revokeObjectURL(url));
     setSelectedFiles([]);
     setPreviewUrls([]);
 
-    // Cleanup on unmount
+    // Cleanup on unmount: revoke any remaining object URLs
     return () => {
       previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [post, previewUrls]);
+  }, [post]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

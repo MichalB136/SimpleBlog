@@ -30,6 +30,9 @@ public static class ProductEndpoints
         products.MapPut(endpointConfig.Products.Update, Update).RequireAuthorization();
         products.MapDelete(endpointConfig.Products.Delete, Delete).RequireAuthorization();
         products.MapPut("/{id:guid}/tags", AssignTags).RequireAuthorization();
+        products.MapPost("/{id:guid}/view", RecordView);
+        products.MapGet("/analytics/top-sold", GetTopSold).RequireAuthorization();
+        products.MapGet("/analytics/top-viewed", GetTopViewed).RequireAuthorization();
     }
 
     private static async Task<IResult> GetAll(
@@ -58,10 +61,28 @@ public static class ProductEndpoints
         return Results.Ok(await repository.GetAllAsync(filter, page, pageSize));
     }
 
-    private static async Task<IResult> GetById(Guid id, IProductRepository repository)
+    private static async Task<IResult> GetById(Guid id, IProductRepository repository, HttpContext context)
     {
         var product = await repository.GetByIdAsync(id);
-        return product is not null ? Results.Ok(product) : Results.NotFound();
+        if (product is null)
+            return Results.NotFound();
+
+        try
+        {
+            var userId = context.User?.Identity?.Name;
+            var sessionId = context.Request.Headers.ContainsKey("X-Session-Id")
+                ? context.Request.Headers["X-Session-Id"].FirstOrDefault()
+                : context.Request.Query["sessionId"].FirstOrDefault();
+
+            // Record view asynchronously (best-effort)
+            await repository.RecordViewAsync(id, userId, sessionId);
+        }
+        catch
+        {
+            // Swallow logging here to avoid breaking product fetch on analytics errors
+        }
+
+        return Results.Ok(product);
     }
 
     private static async Task<IResult> Create(
@@ -172,5 +193,53 @@ public static class ProductEndpoints
             logger.LogError(ex, "Error assigning tags to product {ProductId}", id);
             return Results.Problem("Failed to assign tags to product");
         }
+    }
+
+    private static async Task<IResult> RecordView(Guid id, IProductRepository repository, HttpContext context)
+    {
+        try
+        {
+            // Optionally capture user id or session id
+            var userId = context.User?.Identity?.Name;
+            var sessionId = context.Request.Query["sessionId"].FirstOrDefault();
+            await repository.RecordViewAsync(id, userId, sessionId);
+            return Results.Accepted();
+        }
+        catch (Exception ex)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Error recording view for product {ProductId}", id);
+            return Results.Problem("Failed to record view");
+        }
+    }
+
+    private static async Task<IResult> GetTopSold(
+        HttpContext context,
+        IProductRepository repository,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 10,
+        AuthorizationConfiguration authConfig = null)
+    {
+        if (authConfig is not null && authConfig.RequireAdminForOrderView && !context.User.IsInRole(SeedDataConstants.AdminRole))
+            return Results.Forbid();
+
+        var result = await repository.GetTopSoldProductsAsync(from, to, limit);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetTopViewed(
+        HttpContext context,
+        IProductRepository repository,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 10,
+        AuthorizationConfiguration authConfig = null)
+    {
+        if (authConfig is not null && authConfig.RequireAdminForOrderView && !context.User.IsInRole(SeedDataConstants.AdminRole))
+            return Results.Forbid();
+
+        var result = await repository.GetTopViewedProductsAsync(from, to, limit);
+        return Results.Ok(result);
     }
 }

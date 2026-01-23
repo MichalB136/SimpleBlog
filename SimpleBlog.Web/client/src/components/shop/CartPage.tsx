@@ -1,7 +1,9 @@
 import { useCart } from '@/hooks/useCart';
+import { useNavigate } from 'react-router-dom';
 
 export function CartPage() {
   const { items, totalPrice, removeItem, updateQuantity, clearCart } = useCart();
+  const navigate = useNavigate();
 
   if (items.length === 0) {
     return (
@@ -99,26 +101,23 @@ export function CartPage() {
                   <span>Subtotal:</span>
                   <span>{totalPrice.toFixed(2)} zł</span>
                 </div>
-                <div className="d-flex justify-content-between mb-2">
-                  <span>Podatek (23%):</span>
-                  <span>{(totalPrice * 0.23).toFixed(2)} zł</span>
-                </div>
                 <hr />
                 <div className="d-flex justify-content-between mb-3">
                   <strong>Razem:</strong>
                   <strong className="fs-5 text-primary">
-                    {(totalPrice * 1.23).toFixed(2)} zł
+                    {totalPrice.toFixed(2)} zł
                   </strong>
                 </div>
                 <button
                   className="btn btn-primary w-100"
-                  disabled
-                  title="Funkcja dostępna wkrótce"
+                  onClick={() => navigate('/checkout')}
+                  title="Przejdź do formularza zamówienia"
                 >
-                  <i className="bi bi-credit-card me-2"></i>Przejdź do płatności
+                  <i className="bi bi-bag-check me-2"></i>Przejdź do zamówienia
                 </button>
                 <p className="text-muted small text-center mt-2 mb-0">
-                  Płatność będzie dostępna wkrótce
+                  Płatność jest obsługiwana przez zewnętrzny serwis — po złożeniu
+                  zamówienia zamówienie musi zostać zaakceptowane przez sklep.
                 </p>
               </div>
             </div>

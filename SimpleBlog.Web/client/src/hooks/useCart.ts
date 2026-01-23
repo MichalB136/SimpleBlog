@@ -6,25 +6,26 @@ export interface CartItem extends Product {
 }
 
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [totalPrice, setTotalPrice] = useState(0);
-
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('cart');
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        setItems([]);
-      }
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
-  }, []);
+  });
 
-  // Save cart to localStorage whenever items change
+  const [totalPrice, setTotalPrice] = useState(() =>
+    items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  );
+
+  // Persist cart to localStorage and keep totalPrice in sync when items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-    // Calculate total
+    try {
+      localStorage.setItem('cart', JSON.stringify(items));
+    } catch {
+      // ignore storage errors
+    }
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     setTotalPrice(total);
   }, [items]);

@@ -339,4 +339,84 @@ public sealed class EfProductRepository(
             },
             new { ProductId = productId, TagCount = tagIds.Count });
     }
+
+    public async Task RecordViewAsync(Guid productId, string? userId = null, string? sessionId = null)
+    {
+        await operationLogger.LogRepositoryOperationAsync(
+            "RecordView",
+            "Product",
+            async () =>
+            {
+                var view = new ProductViewEntity
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = productId,
+                    ViewedAt = DateTimeOffset.UtcNow,
+                    UserId = userId,
+                    SessionId = sessionId
+                };
+                context.ProductViews.Add(view);
+                await context.SaveChangesAsync();
+                return true;
+            },
+            new { ProductId = productId });
+    }
+
+    public async Task<IReadOnlyList<TopProduct>> GetTopSoldProductsAsync(DateTime? from = null, DateTime? to = null, int limit = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetTopSoldProducts",
+            async () =>
+            {
+                var query = context.OrderItems.AsQueryable();
+                if (from.HasValue)
+                    query = query.Where(o => o.Order!.CreatedAt >= from.Value);
+                if (to.HasValue)
+                    query = query.Where(o => o.Order!.CreatedAt <= to.Value);
+
+                var grouped = await query
+                    .GroupBy(i => new { i.ProductId, i.ProductName })
+                    .Select(g => new TopProduct(g.Key.ProductId, g.Key.ProductName, g.Sum(x => x.Quantity)))
+                    .OrderByDescending(tp => tp.Count)
+                    .Take(limit)
+                    .ToListAsync();
+
+                return grouped;
+            },
+            new { from, to, limit });
+    }
+
+    public async Task<IReadOnlyList<TopProduct>> GetTopViewedProductsAsync(DateTime? from = null, DateTime? to = null, int limit = 10)
+    {
+        return await operationLogger.LogQueryPerformanceAsync(
+            "GetTopViewedProducts",
+            async () =>
+            {
+                var query = context.ProductViews.AsQueryable();
+                if (from.HasValue)
+                    query = query.Where(v => v.ViewedAt >= from.Value);
+                if (to.HasValue)
+                    query = query.Where(v => v.ViewedAt <= to.Value);
+
+                var grouped = await query
+                    .GroupBy(v => v.ProductId)
+                    .Select(g => new { ProductId = g.Key, Views = g.LongCount() })
+                    .OrderByDescending(x => x.Views)
+                    .Take(limit)
+                    .ToListAsync();
+
+                // Join product names
+                var productIds = grouped.Select(g => g.ProductId).ToList();
+                var products = await context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
+
+                var result = grouped.Select(g =>
+                {
+                    var prod = products.FirstOrDefault(p => p.Id == g.ProductId);
+                    return new TopProduct(g.ProductId, prod?.Name ?? string.Empty, g.Views);
+                }).ToList();
+
+                return result;
+            },
+            new { from, to, limit });
+    }
 }

@@ -36,6 +36,43 @@ internal sealed class InMemoryUserRepository : IUserRepository
         return Task.FromResult<(bool Success, string? ErrorMessage)>((true, null));
     }
 
+    // Simple in-memory refresh token store: token -> (username, expiresUtc, revoked)
+    private readonly Dictionary<string, (string Username, DateTime ExpiresUtc, bool Revoked)> _refreshTokens = new();
+
+    public Task SaveRefreshTokenAsync(string username, string refreshToken, DateTime expiresUtc)
+    {
+        _refreshTokens[refreshToken] = (username.ToLower(), expiresUtc, false);
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> GetUsernameByRefreshTokenAsync(string refreshToken)
+    {
+        if (_refreshTokens.TryGetValue(refreshToken, out var info))
+        {
+            if (!info.Revoked && info.ExpiresUtc > DateTime.UtcNow)
+                return Task.FromResult<string?>(info.Username);
+        }
+        return Task.FromResult<string?>(null);
+    }
+
+    public Task RevokeRefreshTokenAsync(string refreshToken)
+    {
+        if (_refreshTokens.TryGetValue(refreshToken, out var info))
+        {
+            _refreshTokens[refreshToken] = (info.Username, info.ExpiresUtc, true);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<User?> GetUserByUsernameAsync(string username)
+    {
+        if (_users.TryGetValue(username.ToLower(), out var info))
+        {
+            return Task.FromResult<User?>(new User(username, info.Email, info.Role));
+        }
+        return Task.FromResult<User?>(null);
+    }
+
     /// <summary>
     /// Constant-time string comparison to prevent timing attacks on password validation.
     /// </summary>

@@ -151,6 +151,23 @@ public static class WebAppSetup
 
         // SPA fallback to Vite-built index
         app.MapFallbackToFile("dist/index.html");
+
+        // Serve common favicon routes (some browsers request /favicon.ico)
+        var faviconSvg = Path.Combine(distPath, "favicon.svg");
+        var faviconPng = Path.Combine(wwwrootPath, "favicon.png");
+        if (File.Exists(faviconSvg))
+        {
+            app.MapGet("/favicon.ico", () => Results.File(faviconSvg, "image/svg+xml"));
+        }
+        else if (File.Exists(faviconPng))
+        {
+            app.MapGet("/favicon.ico", () => Results.File(faviconPng, "image/png"));
+        }
+            // Serve /favicon.svg if present (index.html references it)
+            if (File.Exists(faviconSvg))
+            {
+                app.MapGet("/favicon.svg", () => Results.File(faviconSvg, "image/svg+xml"));
+            }
     }
 
     public static void MapApiEndpoints(WebApplication app)
