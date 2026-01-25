@@ -1,4 +1,5 @@
 using CloudinaryDotNet;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.ApiService;
 using Microsoft.AspNetCore.Antiforgery;
@@ -18,8 +19,24 @@ var builder = WebApplication.CreateBuilder(args);
 ConfigureConfiguration(builder);
 ConfigureHosting(builder);
 
-var connectionString = builder.Configuration.GetConnectionString("blogdb")
-    ?? throw new InvalidOperationException("Connection string 'blogdb' not found.");
+// Resolve connection string from configuration or common environment aliases (DATABASE_URL)
+var rawConnection = builder.Configuration.GetConnectionString("blogdb");
+
+// If not present in configuration, check common environment variables Render provides
+if (string.IsNullOrWhiteSpace(rawConnection))
+{
+    rawConnection = Environment.GetEnvironmentVariable("DATABASE_URL")
+        ?? Environment.GetEnvironmentVariable("ConnectionStrings__blogdb")
+        ?? Environment.GetEnvironmentVariable("SimpleBlog_ConnectionStrings__blogdb");
+}
+
+if (string.IsNullOrWhiteSpace(rawConnection))
+{
+    throw new InvalidOperationException("Connection string 'blogdb' not found. Set SimpleBlog_ConnectionStrings__blogdb or DATABASE_URL.");
+}
+
+var connectionString = NormalizeConnectionString(rawConnection);
+
 
 var jwtParameters = builder.ConfigureJwt();
 ConfigureServices(builder, connectionString);
@@ -145,5 +162,30 @@ static void LogCloudinarySetup(WebApplication app, CloudinarySetup.Result cloudi
     {
         logger.LogWarning("{Message}", cloudinarySetup.Message);
     }
+}
+
+static string NormalizeConnectionString(string raw)
+{
+    if (string.IsNullOrWhiteSpace(raw)) return raw;
+
+    if (raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        var uri = new Uri(raw);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = SslMode.Require,
+            TrustServerCertificate = true
+        };
+
+        return builder.ConnectionString;
+    }
+
+    return raw;
 }
 
