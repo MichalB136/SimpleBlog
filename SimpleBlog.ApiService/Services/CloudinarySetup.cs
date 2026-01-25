@@ -54,8 +54,7 @@ public static class CloudinarySetup
                 return new Result(false,
                     "Cloudinary not configured. Image upload features will not be available. " +
                     "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +
-                    "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret. " +
-                    details);
+                    "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret. ");
             }
         }
     }
