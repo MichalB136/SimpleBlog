@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using SimpleBlog.Common;
+using SimpleBlog.ApiService.Services;
 using SimpleBlog.Common.Logging;
 
 namespace SimpleBlog.ApiService.Handlers;
@@ -31,6 +32,18 @@ public sealed class ProductHandler : IProductHandler
         _logger = logger;
         _endpointConfig = endpointConfig;
         _authConfig = authConfig;
+    }
+
+    // Backwards-compatible constructor used in tests or callers that don't supply IImageStorageService
+    public ProductHandler(
+        IProductRepository repository,
+        IValidator<UpdateProductRequest> updateValidator,
+        IOperationLogger operationLogger,
+        ILogger<ProductHandler> logger,
+        EndpointConfiguration endpointConfig,
+        AuthorizationConfiguration authConfig)
+        : this(repository, new NoOpImageStorageService(), updateValidator, operationLogger, logger, endpointConfig, authConfig)
+    {
     }
 
     private Product GenerateSignedUrlForProduct(Product product)
