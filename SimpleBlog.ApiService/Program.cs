@@ -1,4 +1,5 @@
 using CloudinaryDotNet;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.ApiService;
@@ -29,6 +30,14 @@ if (string.IsNullOrWhiteSpace(rawConnection))
         ?? Environment.GetEnvironmentVariable("ConnectionStrings__blogdb")
         ?? Environment.GetEnvironmentVariable("SimpleBlog_ConnectionStrings__blogdb");
 }
+
+// Log presence of connection-related environment variables (do not log values)
+using var _tmpLoggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var _tmpLogger = _tmpLoggerFactory.CreateLogger("StartupEnvCheck");
+_tmpLogger.LogInformation("Connection string source - appsettings: {HasConfig}", !string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("blogdb")));
+_tmpLogger.LogInformation("Env DATABASE_URL present: {HasDbUrl}", !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DATABASE_URL")));
+_tmpLogger.LogInformation("Env ConnectionStrings__blogdb present: {HasConnStr}", !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ConnectionStrings__blogdb")));
+_tmpLogger.LogInformation("Env SimpleBlog_ConnectionStrings__blogdb present: {HasPrefixed}", !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SimpleBlog_ConnectionStrings__blogdb")));
 
 if (string.IsNullOrWhiteSpace(rawConnection))
 {

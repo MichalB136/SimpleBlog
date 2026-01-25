@@ -27,7 +27,7 @@ public static class CloudinarySetup
         }
         else
         {
-                // Fallback to individual settings
+            // Fallback to individual settings
             var cloudName = configuration["Cloudinary:CloudName"];
             var apiKey = configuration["Cloudinary:ApiKey"];
             var apiSecret = configuration["Cloudinary:ApiSecret"];
@@ -50,10 +50,19 @@ public static class CloudinarySetup
                 // discovery from inferring body parameters when the service is missing.
                 services.AddScoped<IImageStorageService, NoOpImageStorageService>();
 
+                // Build a presence map (do not expose secret values)
+                var foundCloudinaryUrl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLOUDINARY_URL"));
+                var foundCloudName = !string.IsNullOrEmpty(cloudName);
+                var foundApiKey = !string.IsNullOrEmpty(apiKey);
+                var foundApiSecret = !string.IsNullOrEmpty(apiSecret);
+
+                var details = $"Presence: CLOUDINARY_URL={foundCloudinaryUrl}, CloudName={foundCloudName}, ApiKey={foundApiKey}, ApiSecret={foundApiSecret}";
+
                 return new Result(false,
                     "Cloudinary not configured. Image upload features will not be available. " +
                     "Set CLOUDINARY_URL environment variable (cloudinary://api_key:api_secret@cloud_name) " +
-                    "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret");
+                    "or individual variables: SimpleBlog_Cloudinary__CloudName, SimpleBlog_Cloudinary__ApiKey, SimpleBlog_Cloudinary__ApiSecret. " +
+                    details);
             }
         }
     }
