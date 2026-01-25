@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using static SimpleBlog.ApiService.SeedDataConstants;
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.ApiService.Data;
 using SimpleBlog.Blog.Services;
@@ -75,6 +76,32 @@ public static class DatabaseExtensions
             
             var shopDb = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
             await shopDb.Database.MigrateAsync();
+
+            // Ensure core roles exist so authorization checks work even when full seeding is disabled
+            try
+            {
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var rolesToEnsure = new[] { AdminRole, UserRole };
+                foreach (var roleName in rolesToEnsure)
+                {
+                    if (!await roleManager.RoleExistsAsync(roleName))
+                    {
+                        var createResult = await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+                        if (createResult.Succeeded)
+                        {
+                            logger.LogInformation("Created role {Role}", roleName);
+                        }
+                        else
+                        {
+                            logger.LogWarning("Failed to create role {Role}: {Errors}", roleName, string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not ensure roles after migration (continuing)");
+            }
         }
         catch (Exception ex)
         {
