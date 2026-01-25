@@ -38,7 +38,8 @@ public sealed class UpdateProductRequestValidator : AbstractValidator<UpdateProd
                       x.Price.HasValue || 
                       x.Stock.HasValue || 
                       !string.IsNullOrEmpty(x.Category) || 
-                      !string.IsNullOrEmpty(x.ImageUrl))
+                      !string.IsNullOrEmpty(x.ImageUrl) ||
+                      (x.Colors != null && x.Colors.Count > 0))
             .WithMessage("At least one field must be provided for update");
     }
 }

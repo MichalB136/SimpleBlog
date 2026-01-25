@@ -297,3 +297,41 @@ a:hover {
 .text-muted {
   color: var(--bs-secondary-color) !important;
 }
+
+/* Product color swatches */
+.color-swatches {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--bs-border-color);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  display: inline-block;
+  overflow: hidden;
+}
+.color-swatch-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.color-swatch-label {
+  font-size: 0.85rem;
+  color: var(--bs-secondary-color);
+  margin-left: 0.5rem;
+}
+
+/* Product card hover effect */
+.product-card {
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  background-color: rgba(var(--bs-primary-rgb, 13,110,253), 0.06);
+}

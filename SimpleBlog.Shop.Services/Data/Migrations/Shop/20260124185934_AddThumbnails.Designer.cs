@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpleBlog.Shop.Services;
@@ -11,9 +12,11 @@ using SimpleBlog.Shop.Services;
 namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260124185934_AddThumbnails")]
+    partial class AddThumbnails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,8 +60,7 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -137,7 +139,8 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
                         .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(2083)
+                        .HasColumnType("character varying(2083)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -149,6 +152,10 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 
                     b.Property<int>("Stock")
                         .HasColumnType("integer");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(2083)
+                        .HasColumnType("character varying(2083)");
 
                     b.HasKey("Id");
 

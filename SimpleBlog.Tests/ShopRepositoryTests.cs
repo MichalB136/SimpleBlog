@@ -458,4 +458,87 @@ public sealed class ShopRepositoryTests
         // Assert
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task CreateAsync_Product_WithColors_CreatesProductWithColors()
+    {
+        // Arrange
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
+
+        var colors = new List<string> { "#000000", "#ffffff", "red" };
+        var request = new CreateProductRequest(
+            "Colored Product",
+            "Has colors",
+            25.00m,
+            "https://example.com/image.jpg",
+            "Apparel",
+            10,
+            colors
+        );
+
+        // Act
+        var result = await repository.CreateAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Colors?.Count ?? 0);
+
+        // Verify persisted in database
+        var saved = context.Products.Include(p => p.ProductColors).FirstOrDefault(p => p.Id == result.Id);
+        Assert.NotNull(saved);
+        Assert.Equal(3, saved.ProductColors.Count);
+        var savedColors = saved.ProductColors.Select(pc => pc.Color).ToList();
+        Assert.Equal(colors.Count, savedColors.Count);
+        foreach (var c in colors)
+            Assert.Contains(c, savedColors);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Product_UpdateColors_PersistsColors()
+    {
+        // Arrange
+        await using var context = CreateInMemoryContext();
+        var repository = new EfProductRepository(context, new NoOpOperationLogger());
+
+        var productId = Guid.NewGuid();
+        var product = new ProductEntity
+        {
+            Id = productId,
+            Name = "No Colors",
+            Description = "Initially no colors",
+            Price = 15.00m,
+            Category = "Test",
+            Stock = 5,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        context.Products.Add(product);
+        context.SaveChanges();
+
+        var newColors = new List<string> { "blue", "green" };
+        var updateRequest = new UpdateProductRequest(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            newColors
+        );
+
+        // Act
+        var updated = await repository.UpdateAsync(productId, updateRequest);
+
+        // Assert
+        Assert.NotNull(updated);
+        Assert.Equal(2, updated.Colors?.Count ?? 0);
+
+        var saved = context.Products.Include(p => p.ProductColors).FirstOrDefault(p => p.Id == productId);
+        Assert.NotNull(saved);
+        Assert.Equal(2, saved.ProductColors.Count);
+        var savedUpdatedColors = saved.ProductColors.Select(pc => pc.Color).ToList();
+        Assert.Equal(newColors.Count, savedUpdatedColors.Count);
+        foreach (var c in newColors)
+            Assert.Contains(c, savedUpdatedColors);
+    }
 }

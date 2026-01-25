@@ -296,6 +296,15 @@ public static class WebAppSetup
 
     private static void MapProductEndpoints(RouteGroupBuilder api)
     {
+        // Proxy analytics endpoints for products to ApiService (requires auth)
+        api.MapGet("/products/analytics/top-sold",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyGetWithAuthRequest(factory, "/products/analytics/top-sold", context, logger));
+
+        api.MapGet("/products/analytics/top-viewed",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyGetWithAuthRequest(factory, "/products/analytics/top-viewed", context, logger));
+
         api.MapGet(EndpointPaths.Products,
             async (HttpContext context, IHttpClientFactory factory, ILogger<Program> logger) =>
             {
@@ -325,10 +334,36 @@ public static class WebAppSetup
         api.MapPut("/products/{id:guid}/tags",
             async (Guid id, AssignTagsRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
                 await ApiProxyHelper.ProxyPutRequest(factory, $"/products/{id}/tags", request, context, logger));
+
+        api.MapPost("/products/{id:guid}/images",
+            async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyFormDataRequest(factory, $"/products/{id}/images", context, logger));
+
+        // Legacy route: some client builds use singular 'image' path — proxy it to the plural route
+        api.MapPost("/products/{id:guid}/image",
+            async (Guid id, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyFormDataRequest(factory, $"/products/{id}/images", context, logger));
+
+        api.MapDelete("/products/{id:guid}/images",
+            async (Guid id, string imageUrl, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyDeleteRequest(factory, $"/products/{id}/images?imageUrl={Uri.EscapeDataString(imageUrl)}", context, logger));
     }
 
     private static void MapOrderEndpoints(RouteGroupBuilder api)
     {
+        // Proxy analytics endpoints for orders to ApiService
+        api.MapGet("/orders/analytics/summary",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyGetWithAuthRequest(factory, "/orders/analytics/summary", context, logger));
+
+        api.MapGet("/orders/analytics/sales-by-day",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyGetWithAuthRequest(factory, "/orders/analytics/sales-by-day", context, logger));
+
+        api.MapGet("/orders/analytics/status-counts",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyGetWithAuthRequest(factory, "/orders/analytics/status-counts", context, logger));
+
         api.MapGet(EndpointPaths.Orders,
             async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
                 await ApiProxyHelper.ProxyGetWithAuthRequest(factory, EndpointPaths.Orders, context, logger));

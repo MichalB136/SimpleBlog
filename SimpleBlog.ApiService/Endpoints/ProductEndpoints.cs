@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using SimpleBlog.ApiService;
+using SimpleBlog.ApiService.Handlers;
 using SimpleBlog.Common;
 using SimpleBlog.Common.Logging;
 
@@ -24,15 +25,20 @@ public static class ProductEndpoints
 
         var products = app.MapGroup(endpointConfig.Products.Base);
 
-        products.MapGet(endpointConfig.Products.GetAll, GetAll);
-        products.MapGet(endpointConfig.Products.GetById, GetById);
-        products.MapPost(endpointConfig.Products.Create, Create).RequireAuthorization();
-        products.MapPut(endpointConfig.Products.Update, Update).RequireAuthorization();
-        products.MapDelete(endpointConfig.Products.Delete, Delete).RequireAuthorization();
-        products.MapPut("/{id:guid}/tags", AssignTags).RequireAuthorization();
-        products.MapPost("/{id:guid}/view", RecordView);
-        products.MapGet("/analytics/top-sold", GetTopSold).RequireAuthorization();
-        products.MapGet("/analytics/top-viewed", GetTopViewed).RequireAuthorization();
+        products.MapGet(endpointConfig.Products.GetAll, (IProductHandler handler, HttpContext ctx) => handler.GetAll(ctx));
+        products.MapGet(endpointConfig.Products.GetById, (IProductHandler handler, Guid id, HttpContext ctx) => handler.GetById(id, ctx));
+        products.MapPost(endpointConfig.Products.Create, (IProductHandler handler, CreateProductRequest req) => handler.Create(req)).RequireAuthorization();
+        products.MapPut(endpointConfig.Products.Update, (IProductHandler handler, Guid id, UpdateProductRequest req, HttpContext ctx) => handler.Update(id, req, ctx)).RequireAuthorization();
+        products.MapDelete(endpointConfig.Products.Delete, (IProductHandler handler, Guid id, HttpContext ctx) => handler.Delete(id, ctx)).RequireAuthorization();
+        products.MapPut("/{id:guid}/tags", (IProductHandler handler, Guid id, AssignTagsRequest req, HttpContext ctx) => handler.AssignTags(id, req, ctx)).RequireAuthorization();
+        products.MapPost("/{id:guid}/images", 
+            (Guid id, IFormFile file, IProductRepository repository, IImageStorageService imageStorage, HttpContext context, ILogger<Program> logger, CancellationToken ct) 
+                => AddImageToProduct(id, file, repository, imageStorage, context, logger, ct))
+                .RequireAuthorization()
+                .DisableAntiforgery(); // Allow multipart/form-data without antiforgery cookie (API uses JWT auth)
+        products.MapPost("/{id:guid}/view", (IProductHandler handler, Guid id, HttpContext ctx) => handler.RecordView(id, ctx));
+        products.MapGet("/analytics/top-sold", (IProductHandler handler, HttpContext ctx) => handler.GetTopSold(ctx)).RequireAuthorization();
+        products.MapGet("/analytics/top-viewed", (IProductHandler handler, HttpContext ctx) => handler.GetTopViewed(ctx)).RequireAuthorization();
     }
 
     private static async Task<IResult> GetAll(
@@ -241,5 +247,61 @@ public static class ProductEndpoints
 
         var result = await repository.GetTopViewedProductsAsync(from, to, limit);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> AddImageToProduct(
+        Guid id,
+        IFormFile file,
+        IProductRepository repository,
+        IImageStorageService imageStorage,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        logger.LogInformation("POST /products/{ProductId}/images called by {UserName}", id, context.User.Identity?.Name);
+
+        // Require admin role
+        if (!context.User.IsInRole(SeedDataConstants.AdminRole))
+        {
+            logger.LogWarning("User {UserName} attempted to add image to product without Admin role", context.User.Identity?.Name);
+            return Results.Forbid();
+        }
+
+        if (file.Length == 0)
+            return Results.BadRequest(new { error = "File is empty" });
+
+        if (file.Length > 10 * 1024 * 1024) // 10 MB limit
+            return Results.BadRequest(new { error = "File size cannot exceed 10 MB" });
+
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType.ToLowerInvariant()))
+            return Results.BadRequest(new { error = "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "products", ct);
+
+            // Update product ImageUrl
+            var updateReq = new UpdateProductRequest(null, null, null, imageUrl, null, null, null);
+            var updated = await repository.UpdateAsync(id, updateReq);
+            if (updated is null)
+            {
+                logger.LogWarning("Add image attempt for non-existent product: {ProductId}", id);
+                return Results.NotFound(new { error = "Product not found" });
+            }
+
+            logger.LogInformation("Image added to product {ProductId} by {UserName}: {ImageUrl}", id, context.User.Identity?.Name, imageUrl);
+
+            // Return product with signed image URL for client consumption
+            var signedImageUrl = imageStorage.GenerateSignedUrl(updated.ImageUrl, expirationMinutes: 60);
+            var updatedWithSigned = updated with { ImageUrl = signedImageUrl };
+            return Results.Ok(updatedWithSigned);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error adding image to product {ProductId}", id);
+            return Results.Problem("Failed to add image to product");
+        }
     }
 }

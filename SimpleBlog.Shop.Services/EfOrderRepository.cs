@@ -66,6 +66,7 @@ public sealed class EfOrderRepository(
                     ShippingAddress = request.ShippingAddress,
                     ShippingCity = request.ShippingCity,
                     ShippingPostalCode = request.ShippingPostalCode,
+                    Status = "New",
                     TotalAmount = 0,
                     CreatedAt = DateTimeOffset.UtcNow,
                     Items = new List<OrderItemEntity>()
@@ -224,6 +225,86 @@ public sealed class EfOrderRepository(
             new { minAmount, page, pageSize, SpecName = nameof(OrdersByMinimumAmountSpecification) });
     }
 
+        public async Task<OrderSummary> GetOrdersSummaryAsync(DateTime? from = null, DateTime? to = null)
+        {
+            return await operationLogger.LogQueryPerformanceAsync(
+                "GetOrdersSummary",
+                async () =>
+                {
+                    var query = context.Orders.AsQueryable();
+                    if (from.HasValue)
+                        query = query.Where(o => o.CreatedAt >= from.Value);
+                    if (to.HasValue)
+                        query = query.Where(o => o.CreatedAt <= to.Value);
+
+                    var totalOrders = await query.LongCountAsync();
+                    var totalRevenue = await query.SumAsync(o => (decimal?)o.TotalAmount) ?? 0m;
+                    var avg = totalOrders > 0 ? decimal.Round(totalRevenue / totalOrders, 2) : 0m;
+
+                    return new OrderSummary(totalOrders, totalRevenue, avg);
+                },
+                new { from, to });
+        }
+
+        public async Task<IReadOnlyList<SalesByDay>> GetSalesByDayAsync(DateTime? from = null, DateTime? to = null, int limit = 30)
+        {
+            return await operationLogger.LogQueryPerformanceAsync(
+                "GetSalesByDay",
+                async () =>
+                {
+                    var query = context.Orders.AsQueryable();
+                    if (from.HasValue)
+                        query = query.Where(o => o.CreatedAt >= from.Value);
+                    if (to.HasValue)
+                        query = query.Where(o => o.CreatedAt <= to.Value);
+
+                    var intermediate = await query
+                        .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month, o.CreatedAt.Day })
+                        .Select(g => new {
+                            Year = g.Key.Year,
+                            Month = g.Key.Month,
+                            Day = g.Key.Day,
+                            OrdersCount = g.LongCount(),
+                            Revenue = g.Sum(e => e.TotalAmount)
+                        })
+                        .OrderByDescending(x => x.Year)
+                        .ThenByDescending(x => x.Month)
+                        .ThenByDescending(x => x.Day)
+                        .Take(limit)
+                        .ToListAsync();
+
+                    var grouped = intermediate
+                        .Select(x => new SalesByDay(new DateTime(x.Year, x.Month, x.Day), x.OrdersCount, x.Revenue))
+                        .OrderBy(s => s.Date)
+                        .ToList();
+
+                    return grouped;
+                },
+                new { from, to, limit });
+        }
+
+        public async Task<IReadOnlyList<StatusCount>> GetOrderStatusCountsAsync(DateTime? from = null, DateTime? to = null)
+        {
+            return await operationLogger.LogQueryPerformanceAsync(
+                "GetOrderStatusCounts",
+                async () =>
+                {
+                    var query = context.Orders.AsQueryable();
+                    if (from.HasValue)
+                        query = query.Where(o => o.CreatedAt >= from.Value);
+                    if (to.HasValue)
+                        query = query.Where(o => o.CreatedAt <= to.Value);
+
+                    var grouped = await query
+                        .GroupBy(o => o.Status)
+                        .Select(g => new StatusCount(g.Key ?? "", g.LongCount()))
+                        .ToListAsync();
+
+                    return grouped;
+                },
+                new { from, to });
+        }
+
     private static Order MapToModel(OrderEntity entity) =>
         new(
             entity.Id,
@@ -235,6 +316,7 @@ public sealed class EfOrderRepository(
             entity.ShippingPostalCode,
             entity.TotalAmount,
             entity.CreatedAt,
-            entity.Items.Select(i => new OrderItem(i.Id, i.ProductId, i.ProductName, i.Price, i.Quantity)).ToList()
+            entity.Items.Select(i => new OrderItem(i.Id, i.ProductId, i.ProductName, i.Price, i.Quantity)).ToList(),
+            entity.Status
         );
 }

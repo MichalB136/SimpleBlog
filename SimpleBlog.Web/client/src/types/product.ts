@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   stock: number;
   imageUrl?: string;
+  colors?: string[];
   category?: string;
   createdAt?: string;
   tags?: Tag[];
@@ -46,6 +47,7 @@ export interface UpdateProductRequest {
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedColor?: string;
 }
 
 export interface Order {
@@ -57,5 +59,5 @@ export interface Order {
 }
 
 export interface CreateOrderRequest {
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; quantity: number; selectedColor?: string }>;
 }

@@ -20,6 +20,7 @@ public sealed class EfProductRepository(
                 var query = context.Products
                     .Include(p => p.ProductTags)
                         .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.ProductColors)
                     .AsQueryable();
 
                 // Apply filters
@@ -74,6 +75,7 @@ public sealed class EfProductRepository(
                 var entity = await context.Products
                     .Include(p => p.ProductTags)
                         .ThenInclude(pt => pt.Tag)
+                    .Include(p => p.ProductColors)
                     .FirstOrDefaultAsync(p => p.Id == id);
                 return entity is not null ? MapToModel(entity) : null;
             },
@@ -98,6 +100,18 @@ public sealed class EfProductRepository(
                     Stock = request.Stock,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
+                // Attach available colors if provided
+                if (request.Colors is not null && request.Colors.Count > 0)
+                {
+                    foreach (var color in request.Colors)
+                    {
+                        entity.ProductColors.Add(new ProductColorEntity
+                        {
+                            ProductId = entity.Id,
+                            Color = color
+                        });
+                    }
+                }
 
                 context.Products.Add(entity);
                 await context.SaveChangesAsync();
@@ -129,6 +143,22 @@ public sealed class EfProductRepository(
                     entity.Category = request.Category;
                 if (request.Stock.HasValue)
                     entity.Stock = request.Stock.Value;
+
+                // Update colors if provided
+                if (request.Colors is not null)
+                {
+                    // ensure collection is loaded
+                    await context.Entry(entity).Collection(e => e.ProductColors).LoadAsync();
+                    context.ProductColors.RemoveRange(entity.ProductColors);
+                    foreach (var color in request.Colors)
+                    {
+                        entity.ProductColors.Add(new ProductColorEntity
+                        {
+                            ProductId = entity.Id,
+                            Color = color
+                        });
+                    }
+                }
 
                 await context.SaveChangesAsync();
                 return MapToModel(entity);
@@ -293,6 +323,8 @@ public sealed class EfProductRepository(
                 pt.Tag.CreatedAt))
             .ToList();
 
+        var colors = entity.ProductColors?.Select(pc => pc.Color).ToList() ?? new List<string>();
+
         return new Product(
             entity.Id,
             entity.Name,
@@ -302,7 +334,8 @@ public sealed class EfProductRepository(
             entity.Category,
             entity.Stock,
             entity.CreatedAt,
-            tags
+            tags,
+            colors
         );
     }
 
@@ -374,12 +407,16 @@ public sealed class EfProductRepository(
                 if (to.HasValue)
                     query = query.Where(o => o.Order!.CreatedAt <= to.Value);
 
-                var grouped = await query
+                var groupedRaw = await query
                     .GroupBy(i => new { i.ProductId, i.ProductName })
-                    .Select(g => new TopProduct(g.Key.ProductId, g.Key.ProductName, g.Sum(x => x.Quantity)))
-                    .OrderByDescending(tp => tp.Count)
+                    .Select(g => new { g.Key.ProductId, g.Key.ProductName, Count = g.Sum(x => x.Quantity) })
+                    .OrderByDescending(x => x.Count)
                     .Take(limit)
                     .ToListAsync();
+
+                var grouped = groupedRaw
+                    .Select(g => new TopProduct(g.ProductId, g.ProductName, (long)g.Count))
+                    .ToList();
 
                 return grouped;
             },

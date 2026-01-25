@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpleBlog.Shop.Services;
@@ -11,9 +12,11 @@ using SimpleBlog.Shop.Services;
 namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260124173231_AddOrderStatus")]
+    partial class AddOrderStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,8 +60,7 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -97,26 +99,6 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("SimpleBlog.Shop.Services.ProductColorEntity", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Color")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("ThumbnailUrl")
-                        .HasMaxLength(2083)
-                        .HasColumnType("character varying(2083)");
-
-                    b.HasKey("ProductId", "Color");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("ProductColors");
                 });
 
             modelBuilder.Entity("SimpleBlog.Shop.Services.ProductEntity", b =>
@@ -240,17 +222,6 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("SimpleBlog.Shop.Services.ProductColorEntity", b =>
-                {
-                    b.HasOne("SimpleBlog.Shop.Services.ProductEntity", "Product")
-                        .WithMany("ProductColors")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
             modelBuilder.Entity("SimpleBlog.Shop.Services.ProductTagEntity", b =>
                 {
                     b.HasOne("SimpleBlog.Shop.Services.ProductEntity", "Product")
@@ -277,8 +248,6 @@ namespace SimpleBlog.Shop.Services.Data.Migrations.Shop
 
             modelBuilder.Entity("SimpleBlog.Shop.Services.ProductEntity", b =>
                 {
-                    b.Navigation("ProductColors");
-
                     b.Navigation("ProductTags");
                 });
 

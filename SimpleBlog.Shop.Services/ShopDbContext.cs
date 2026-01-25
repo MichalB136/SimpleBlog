@@ -9,6 +9,7 @@ public class ShopDbContext : DbContext
     }
 
     public DbSet<ProductEntity> Products { get; set; } = null!;
+    public DbSet<ProductColorEntity> ProductColors { get; set; } = null!;
     public DbSet<OrderEntity> Orders { get; set; } = null!;
     public DbSet<OrderItemEntity> OrderItems { get; set; } = null!;
     public DbSet<TagEntity> Tags { get; set; } = null!;
@@ -39,6 +40,7 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.ShippingAddress).IsRequired();
             entity.Property(e => e.ShippingCity).IsRequired();
             entity.Property(e => e.ShippingPostalCode).IsRequired();
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.HasMany(e => e.Items).WithOne(i => i.Order!).HasForeignKey(i => i.OrderId).OnDelete(DeleteBehavior.Cascade);
@@ -68,6 +70,15 @@ public class ShopDbContext : DbContext
             entity.HasKey(e => new { e.ProductId, e.TagId });
             entity.HasOne(e => e.Product).WithMany(p => p.ProductTags).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Tag).WithMany(t => t.ProductTags).HasForeignKey(e => e.TagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductColorEntity>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.Color });
+            entity.Property(e => e.Color).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ThumbnailUrl).HasMaxLength(2083);
+            entity.HasOne(e => e.Product).WithMany(p => p.ProductColors).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.ProductId });
         });
 
         modelBuilder.Entity<ProductViewEntity>(entity =>

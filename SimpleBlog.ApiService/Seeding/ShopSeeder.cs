@@ -99,6 +99,7 @@ public static class ShopSeeder
                 ShippingAddress = "ul. Kwiatowa 15",
                 ShippingCity = "Warszawa",
                 ShippingPostalCode = "00-001",
+                Status = "Completed",
                 TotalAmount = 199.99m,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-12),
                 Items = new List<OrderItemEntity>
@@ -122,6 +123,7 @@ public static class ShopSeeder
                 ShippingAddress = "ul. Słoneczna 7/12",
                 ShippingCity = "Kraków",
                 ShippingPostalCode = "30-001",
+                Status = "Processing",
                 TotalAmount = 139.98m,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-8),
                 Items = new List<OrderItemEntity>
@@ -153,6 +155,7 @@ public static class ShopSeeder
                 ShippingAddress = "ul. Leśna 33",
                 ShippingCity = "Gdańsk",
                 ShippingPostalCode = "80-001",
+                Status = "New",
                 TotalAmount = 850.00m,
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-3),
                 Items = new List<OrderItemEntity>

@@ -57,6 +57,8 @@ public record CreateProductRequest(
     string? ImageUrl,
     string Category,
     int Stock
+    ,
+    List<string>? Colors = null
 );
 
 public record UpdateProductRequest(
@@ -66,6 +68,8 @@ public record UpdateProductRequest(
     string? ImageUrl,
     string? Category,
     int? Stock
+    ,
+    List<string>? Colors = null
 );
 
 // Order DTOs

@@ -8,6 +8,7 @@ import { PostForm } from '@/components/posts/PostForm';
 import { PostSearchBar } from '@/components/posts/PostSearchBar';
 import { AboutPage } from '@/components/common/AboutPage';
 import { ShopPage } from '@/components/shop/ShopPage';
+import ProductDetails from '@/components/shop/ProductDetails';
 import { CartPage } from '@/components/shop/CartPage';
 import { CheckoutPage } from '@/components/shop/CheckoutPage';
 import { ContactPage } from '@/components/common/ContactPage';
@@ -189,6 +190,7 @@ function AppContent() {
             } />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/shop" element={<ShopPage onViewCart={() => navigate('/cart')} />} />
+            <Route path="/shop/:id" element={<ProductDetails />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/contact" element={<ContactPage />} />

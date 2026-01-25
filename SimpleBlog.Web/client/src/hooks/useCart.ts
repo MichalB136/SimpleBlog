@@ -1,9 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Product } from '@/types/product';
+import type { Product, CartItem as CartItemType } from '@/types/product';
 
-export interface CartItem extends Product {
-  quantity: number;
-}
+export interface CartItem extends CartItemType {}
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -30,19 +28,19 @@ export function useCart() {
     setTotalPrice(total);
   }, [items]);
 
-  const addItem = useCallback((product: Product, quantity: number = 1) => {
+  const addItem = useCallback((product: Product, quantity: number = 1, selectedColor?: string) => {
     setItems(prevItems => {
-      const existing = prevItems.find(item => item.id === product.id);
+      const existing = prevItems.find(item => item.id === product.id && item.selectedColor === selectedColor);
       if (existing) {
-        // Increase quantity if already in cart
+        // Increase quantity if already in cart (same color)
         return prevItems.map(item =>
-          item.id === product.id
+          item.id === product.id && item.selectedColor === selectedColor
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      // Add new item to cart
-      return [...prevItems, { ...product, quantity }];
+      // Add new item to cart including selectedColor
+      return [...prevItems, { ...product, quantity, selectedColor }];
     });
   }, []);
 

@@ -1,9 +1,11 @@
 using CloudinaryDotNet;
 using Microsoft.EntityFrameworkCore;
 using SimpleBlog.ApiService;
+using Microsoft.AspNetCore.Antiforgery;
 using SimpleBlog.ApiService.Configuration;
 using SimpleBlog.ApiService.Data;
 using SimpleBlog.ApiService.Endpoints;
+using SimpleBlog.ApiService.Handlers;
 using SimpleBlog.ApiService.Identity;
 using SimpleBlog.ApiService.Services;
 using SimpleBlog.Blog.Services;
@@ -71,8 +73,20 @@ static void ConfigureServices(WebApplicationBuilder builder, string connectionSt
     builder.Services.AddOpenApi();
     builder.ConfigureCors();
     builder.ConfigureDatabase(connectionString);
+    // Antiforgery for endpoints that require it (e.g. multipart/form-data handlers)
+    builder.Services.AddAntiforgery(options =>
+    {
+        // Expect CSRF token in header for API calls
+        options.HeaderName = "X-CSRF-TOKEN";
+    });
     builder.Services.AddScoped<IEmailService, SmtpEmailService>();
     builder.Services.AddScoped<IUserRepository, IdentityUserRepository>();
+    builder.Services.AddScoped<IPostHandler, PostHandler>();
+    builder.Services.AddScoped<IProductHandler, ProductHandler>();
+    builder.Services.AddScoped<IOrderHandler, OrderHandler>();
+    builder.Services.AddScoped<IOrderService, OrderService>();
+    builder.Services.AddScoped<IProductService, ProductService>();
+    builder.Services.AddScoped<IAuthService, JwtAuthService>();
 }
 
 static async Task InitializeDatabaseAsync(WebApplication app)
@@ -99,6 +113,10 @@ static void ConfigurePipeline(WebApplication app, (string Issuer, string Audienc
     app.UseCors("AllowDevClients");
     app.UseAuthentication();
     app.UseAuthorization();
+
+    // Enable antiforgery middleware so endpoints that carry antiforgery metadata are supported.
+    // Must be after authentication/authorization and before mapping endpoints.
+    app.UseAntiforgery();
 
     var endpointConfig = app.Services.GetRequiredService<EndpointConfiguration>();
     app.MapAuthEndpoints(jwtParameters.Issuer, jwtParameters.Audience, jwtParameters.Key);

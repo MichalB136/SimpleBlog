@@ -42,11 +42,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// Map API endpoints before serving the SPA to ensure /api routes are handled
+WebAppSetup.MapApiEndpoints(app);
+
 // Client serving (dev proxy or static files)
 WebAppSetup.ConfigureClientServing(app);
-
-// API endpoints
-WebAppSetup.MapApiEndpoints(app);
 
 // SPA fallback handled in ConfigureClientServing for production
 

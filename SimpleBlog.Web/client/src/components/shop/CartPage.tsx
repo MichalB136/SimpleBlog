@@ -1,4 +1,5 @@
 import { useCart } from '@/hooks/useCart';
+import { getColorName } from '@/utils/colorNames';
 import { useNavigate } from 'react-router-dom';
 
 export function CartPage() {
@@ -42,6 +43,16 @@ export function CartPage() {
                     <strong>{item.name}</strong>
                     {item.description && (
                       <p className="text-muted small mb-0">{item.description}</p>
+                    )}
+                    {item.selectedColor && (
+                      <div className="d-flex align-items-center mt-2">
+                        {item.selectedColor.startsWith('http') ? (
+                          <div className="color-swatch me-2" style={{ width: 28, height: 28 }}><img className="color-swatch-img" src={item.selectedColor} alt="pattern" style={{ width: 28, height: 28, objectFit: 'cover' }} /></div>
+                        ) : (
+                          <div className="color-swatch me-2" style={{ width: 28, height: 28, backgroundColor: item.selectedColor }} />
+                        )}
+                        <small className="text-muted">{getColorName(item.selectedColor)}</small>
+                      </div>
                     )}
                   </td>
                   <td>{item.price.toFixed(2)} zł</td>

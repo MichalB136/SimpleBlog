@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/useCart';
+import { getColorName } from '@/utils/colorNames';
 
 export function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
@@ -117,6 +118,9 @@ export function CheckoutPage() {
                       <div>
                         <strong>{item.name}</strong>
                         <div className="small text-muted">Ilość: {item.quantity}</div>
+                        {item.selectedColor && (
+                          <div className="small text-muted">Kolor: {getColorName(item.selectedColor)}</div>
+                        )}
                       </div>
                       <div>{(item.price * item.quantity).toFixed(2)} zł</div>
                     </li>

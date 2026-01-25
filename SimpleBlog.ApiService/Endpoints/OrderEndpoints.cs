@@ -1,5 +1,6 @@
 using FluentValidation;
 using SimpleBlog.ApiService;
+using SimpleBlog.ApiService.Handlers;
 using SimpleBlog.Common;
 using SimpleBlog.Common.Logging;
 using static SimpleBlog.ApiService.SeedDataConstants;
@@ -14,69 +15,12 @@ public static class OrderEndpoints
 
         var orders = app.MapGroup(endpointConfig.Orders.Base);
 
-        orders.MapGet(endpointConfig.Orders.GetAll, GetAll).RequireAuthorization();
-        orders.MapGet(endpointConfig.Orders.GetById, GetById).RequireAuthorization();
-        orders.MapPost(endpointConfig.Orders.Create, Create);
-    }
-
-    private static async Task<IResult> GetAll(
-        IOrderRepository repository,
-        HttpContext context,
-        ILogger<Program> logger,
-        AuthorizationConfiguration authConfig,
-        int page = 1,
-        int pageSize = 10)
-    {
-        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole(AdminRole))
-        {
-            logger.LogWarning("Unauthorized attempt to view all orders");
-            return Results.Forbid();
-        }
-        
-        return Results.Ok(await repository.GetAllAsync(page, pageSize));
-    }
-
-    private static async Task<IResult> GetById(
-        Guid id,
-        IOrderRepository repository,
-        HttpContext context,
-        ILogger<Program> logger,
-        AuthorizationConfiguration authConfig)
-    {
-        if (authConfig.RequireAdminForOrderView && !context.User.IsInRole(AdminRole))
-        {
-            logger.LogWarning("Unauthorized attempt to view order: {OrderId}", id);
-            return Results.Forbid();
-        }
-        
-        var order = await repository.GetByIdAsync(id);
-        return order is not null ? Results.Ok(order) : Results.NotFound();
-    }
-
-    private static async Task<IResult> Create(
-        CreateOrderRequest request,
-        IValidator<CreateOrderRequest> validator,
-        IOrderRepository repository,
-        IOperationLogger operationLogger,
-        IEmailService emailService,
-        ILogger<Program> logger,
-        EndpointConfiguration endpointConfig)
-    {
-        // Validate request using FluentValidation
-        var validationResult = await validator.ValidateAsync(request);
-        if (!validationResult.IsValid)
-        {
-            operationLogger.LogValidationFailure("CreateOrder", request, validationResult.Errors);
-            return Results.ValidationProblem(validationResult.ToDictionary());
-        }
-
-        var created = await repository.CreateAsync(request);
-        logger.LogInformation("Order created: {OrderId}, Total: {Total}", created.Id, created.TotalAmount);
-        
-        // Send email notification
-        await emailService.SendOrderConfirmationAsync(request.CustomerEmail, request.CustomerName, created);
-        logger.LogInformation("Order confirmation email sent to: {Email}", request.CustomerEmail);
-        
-        return Results.Created($"{endpointConfig.Orders.Base}/{created.Id}", created);
+        orders.MapGet(endpointConfig.Orders.GetAll, (IOrderHandler handler, HttpContext ctx) => handler.GetAll(ctx)).RequireAuthorization();
+        orders.MapGet(endpointConfig.Orders.GetById, (IOrderHandler handler, Guid id, HttpContext ctx) => handler.GetById(id, ctx)).RequireAuthorization();
+        // Analytics endpoints for orders
+        orders.MapGet("/analytics/summary", (IOrderHandler handler, HttpContext ctx) => handler.GetSummary(ctx)).RequireAuthorization();
+        orders.MapGet("/analytics/sales-by-day", (IOrderHandler handler, HttpContext ctx) => handler.GetSalesByDay(ctx)).RequireAuthorization();
+        orders.MapGet("/analytics/status-counts", (IOrderHandler handler, HttpContext ctx) => handler.GetStatusCounts(ctx)).RequireAuthorization();
+        orders.MapPost(endpointConfig.Orders.Create, (IOrderHandler handler, CreateOrderRequest req) => handler.Create(req));
     }
 }

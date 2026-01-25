@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { TagSelector } from '@/components/common/TagSelector';
+import { ColorSelector } from '@/components/common/ColorSelector';
+import ProductThumbnailUpload from '@/components/admin/ProductThumbnailUpload';
 import type { Product } from '@/types/product';
 
 interface ProductFormState {
@@ -11,6 +13,7 @@ interface ProductFormState {
   category: string;
   imageUrl: string;
   tagIds: string[];
+  colors: string[];
 }
 
 const emptyForm: ProductFormState = {
@@ -21,6 +24,7 @@ const emptyForm: ProductFormState = {
   category: '',
   imageUrl: '',
   tagIds: [],
+  colors: [],
 };
 
 export function ProductManagement() {
@@ -41,11 +45,14 @@ export function ProductManagement() {
         category: editingProduct.category ?? '',
         imageUrl: editingProduct.imageUrl ?? '',
         tagIds: editingProduct.tags?.map((t) => t.id) ?? [],
+        colors: editingProduct.colors ?? [],
       });
     } else {
       setForm(emptyForm);
     }
   }, [editingProduct]);
+
+  
 
   const sortedProducts = useMemo(
     () => [...products].sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime()),
@@ -74,6 +81,7 @@ export function ProductManagement() {
       stock: Number(form.stock) || 0,
       category: form.category.trim() || undefined,
       imageUrl: form.imageUrl.trim() || undefined,
+      colors: form.colors && form.colors.length > 0 ? form.colors : undefined,
     };
 
     setIsSaving(true);
@@ -176,6 +184,13 @@ export function ProductManagement() {
                       </div>
                     ) : (
                       <span className="text-muted">Brak</span>
+                    )}
+                    {product.colors && product.colors.length > 0 && (
+                      <div className="mt-2 d-flex gap-1">
+                        {product.colors.map((c) => (
+                          <span key={c} title={c} className="rounded-circle" style={{ display: 'inline-block', width: 16, height: 16, background: c, border: '1px solid #ccc' }}></span>
+                        ))}
+                      </div>
                     )}
                   </td>
                   <td className="text-end">
@@ -285,6 +300,37 @@ export function ProductManagement() {
                       </div>
                     </div>
 
+                    <div className="col-12 mt-2">
+                      <ProductThumbnailUpload
+                        productId={editingProduct ? editingProduct.id : null}
+                        onUploaded={async (imageUrl: string) => {
+                          setForm((f) => ({ ...f, imageUrl }));
+                          if (editingProduct) {
+                            setIsSaving(true);
+                            try {
+                              const payload = {
+                                name: form.name.trim(),
+                                description: form.description.trim(),
+                                price: Number(form.price) || 0,
+                                stock: Number(form.stock) || 0,
+                                category: form.category.trim() || undefined,
+                                imageUrl: imageUrl || undefined,
+                                colors: form.colors && form.colors.length > 0 ? form.colors : undefined,
+                              };
+                              await update(editingProduct.id, payload, form.tagIds);
+                              await refresh();
+                              setMessage({ type: 'success', text: 'Zdjęcie przesłane i zapisane' });
+                            } catch (err: any) {
+                              setMessage({ type: 'error', text: err?.message || 'Błąd zapisu zdjęcia' });
+                            } finally {
+                              setIsSaving(false);
+                            }
+                          }
+                        }}
+                        disabled={isSaving}
+                      />
+                    </div>
+
                     <div className="mt-3">
                       <label className="form-label">Tagi (style, materiały, okazje)</label>
                       <TagSelector
@@ -293,6 +339,10 @@ export function ProductManagement() {
                         disabled={isSaving}
                       />
                       <small className="text-muted">Wybierz tagi, aby filtrować ręcznie robione ubrania.</small>
+                    </div>
+                    <div className="mt-3">
+                      <label className="form-label">Dostępne kolory</label>
+                      <ColorSelector colors={form.colors} onChange={(c) => setForm({ ...form, colors: c })} disabled={isSaving} />
                     </div>
                   </div>
                   <div className="modal-footer">

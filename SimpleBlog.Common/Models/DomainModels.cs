@@ -45,7 +45,8 @@ public record Product(
     string Category,
     int Stock,
     DateTimeOffset CreatedAt,
-    IReadOnlyList<Tag> Tags
+    IReadOnlyList<Tag> Tags,
+    IReadOnlyList<string> Colors = null!
 );
 
 public record Order(
@@ -59,6 +60,8 @@ public record Order(
     decimal TotalAmount,
     DateTimeOffset CreatedAt,
     IReadOnlyList<OrderItem> Items
+    ,
+    string Status = "New"
 );
 
 public record OrderItem(
@@ -72,5 +75,22 @@ public record OrderItem(
 public record TopProduct(
     Guid ProductId,
     string ProductName,
+    long Count
+);
+
+public record OrderSummary(
+    long TotalOrders,
+    decimal TotalRevenue,
+    decimal AverageOrderValue
+);
+
+public record SalesByDay(
+    DateTime Date,
+    long OrdersCount,
+    decimal Revenue
+);
+
+public record StatusCount(
+    string Status,
     long Count
 );

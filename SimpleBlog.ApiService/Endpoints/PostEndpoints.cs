@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using SimpleBlog.ApiService;
+using SimpleBlog.ApiService.Handlers;
 using SimpleBlog.Common;
 using SimpleBlog.Common.Logging;
 
@@ -35,23 +36,23 @@ public static class PostEndpoints
 
         var posts = app.MapGroup(endpointConfig.Posts.Base);
 
-        posts.MapGet(endpointConfig.Posts.GetAll, GetAll);
-        posts.MapGet(endpointConfig.Posts.GetById, GetById);
-        posts.MapPost(endpointConfig.Posts.Create, Create)
+        posts.MapGet(endpointConfig.Posts.GetAll, (IPostHandler handler, HttpContext ctx) => handler.GetAll(ctx));
+        posts.MapGet(endpointConfig.Posts.GetById, (IPostHandler handler, Guid id) => handler.GetById(id));
+        posts.MapPost(endpointConfig.Posts.Create, (IPostHandler handler, HttpContext ctx, CancellationToken ct) => handler.Create(ctx, ct))
             .RequireAuthorization()
             .DisableAntiforgery(); // Allow multipart/form-data
-        posts.MapPut(endpointConfig.Posts.Update, Update).RequireAuthorization();
-        posts.MapDelete(endpointConfig.Posts.Delete, Delete).RequireAuthorization();
-        posts.MapGet(endpointConfig.Posts.GetComments, GetComments);
-        posts.MapPost(endpointConfig.Posts.AddComment, AddComment);
-        posts.MapPut("/{id:guid}/pin", PinPost).RequireAuthorization();
-        posts.MapPut("/{id:guid}/unpin", UnpinPost).RequireAuthorization();
-        posts.MapPost("/{id:guid}/images", AddImageToPost)
+        posts.MapPut(endpointConfig.Posts.Update, (IPostHandler handler, Guid id, UpdatePostRequest req, HttpContext ctx) => handler.Update(id, req, ctx)).RequireAuthorization();
+        posts.MapDelete(endpointConfig.Posts.Delete, (IPostHandler handler, Guid id, HttpContext ctx) => handler.Delete(id, ctx)).RequireAuthorization();
+        posts.MapGet(endpointConfig.Posts.GetComments, (IPostHandler handler, Guid id) => handler.GetComments(id));
+        posts.MapPost(endpointConfig.Posts.AddComment, (IPostHandler handler, Guid id, CreateCommentRequest req) => handler.AddComment(id, req));
+        posts.MapPut("/{id:guid}/pin", (IPostHandler handler, Guid id, HttpContext ctx) => handler.PinPost(id, ctx)).RequireAuthorization();
+        posts.MapPut("/{id:guid}/unpin", (IPostHandler handler, Guid id, HttpContext ctx) => handler.UnpinPost(id, ctx)).RequireAuthorization();
+        posts.MapPost("/{id:guid}/images", (IPostHandler handler, Guid id, IFormFile file, HttpContext ctx, CancellationToken ct) => handler.AddImageToPost(id, file, ctx, ct))
             .RequireAuthorization()
             .DisableAntiforgery();
-        posts.MapDelete("/{id:guid}/images", RemoveImageFromPost)
+        posts.MapDelete("/{id:guid}/images", (IPostHandler handler, Guid id, [FromQuery] string imageUrl, HttpContext ctx, CancellationToken ct) => handler.RemoveImageFromPost(id, imageUrl, ctx, ct))
             .RequireAuthorization();
-        posts.MapPut("/{id:guid}/tags", AssignTags)
+        posts.MapPut("/{id:guid}/tags", (IPostHandler handler, Guid id, AssignTagsRequest req, HttpContext ctx) => handler.AssignTags(id, req, ctx))
             .RequireAuthorization();
     }
 
