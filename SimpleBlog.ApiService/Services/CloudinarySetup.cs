@@ -50,13 +50,6 @@ public static class CloudinarySetup
                 // discovery from inferring body parameters when the service is missing.
                 services.AddScoped<IImageStorageService, NoOpImageStorageService>();
 
-                // Build a presence map (do not expose secret values)
-                var foundCloudinaryUrl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLOUDINARY_URL"));
-                var foundCloudName = !string.IsNullOrEmpty(cloudName);
-                var foundApiKey = !string.IsNullOrEmpty(apiKey);
-                var foundApiSecret = !string.IsNullOrEmpty(apiSecret);
-
-                var details = $"Presence: CLOUDINARY_URL={foundCloudinaryUrl}, CloudName={foundCloudName}, ApiKey={foundApiKey}, ApiSecret={foundApiSecret}";
 
                 return new Result(false,
                     "Cloudinary not configured. Image upload features will not be available. " +
