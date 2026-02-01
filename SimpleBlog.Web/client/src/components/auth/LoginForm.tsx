@@ -3,7 +3,11 @@ import type { FormEvent } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import type { LoginRequest } from '@/types/auth';
 
-export function LoginForm() {
+interface LoginFormProps {
+  onForgotPassword?: () => void;
+}
+
+export function LoginForm({ onForgotPassword }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,6 +54,16 @@ export function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+              </div>
+              <div className="mb-3">
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0"
+                  onClick={onForgotPassword}
+                  style={{ textDecoration: 'none' }}
+                >
+                  Zapomniałem hasła
+                </button>
               </div>
               <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                 {loading ? 'Logowanie...' : 'Zaloguj'}

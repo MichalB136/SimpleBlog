@@ -107,7 +107,7 @@ public static class PostEndpoints
 
     private static async Task<IResult> Create([AsParameters] CreatePostDependencies deps, CancellationToken ct)
     {
-        deps.Logger.LogInformation("POST {Endpoint} called by {UserName}", deps.EndpointConfig.Posts.Base, deps.HttpContext.User.Identity?.Name);
+        deps.Logger.LogInformation("POST {Endpoint} called by {UserName}", deps.EndpointConfig.Posts.Base, PiiMask.MaskUserName(deps.HttpContext.User.Identity?.Name));
 
         var authorizationResult = EnsureCreateAuthorization(deps);
         if (authorizationResult is not null)
@@ -130,7 +130,7 @@ public static class PostEndpoints
     {
         if (deps.AuthConfig.RequireAdminForPostCreate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            deps.Logger.LogWarning("User {UserName} attempted to create post without Admin role", deps.HttpContext.User.Identity?.Name);
+            deps.Logger.LogWarning("User {UserName} attempted to create post without Admin role", PiiMask.MaskUserName(deps.HttpContext.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -276,7 +276,7 @@ public static class PostEndpoints
         // Require admin role to update posts
         if (deps.AuthConfig.RequireAdminForPostUpdate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            deps.Logger.LogWarning("User {UserName} attempted to update post without Admin role", deps.HttpContext.User.Identity?.Name);
+            deps.Logger.LogWarning("User {UserName} attempted to update post without Admin role", PiiMask.MaskUserName(deps.HttpContext.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -367,7 +367,7 @@ public static class PostEndpoints
         // Require admin role to pin posts
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to pin post without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to pin post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -378,7 +378,7 @@ public static class PostEndpoints
             return Results.NotFound();
         }
 
-        logger.LogInformation("Post pinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        logger.LogInformation("Post pinned: {PostId} by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
         return Results.Ok(pinned);
     }
 
@@ -391,7 +391,7 @@ public static class PostEndpoints
         // Require admin role to unpin posts
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to unpin post without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to unpin post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -402,7 +402,7 @@ public static class PostEndpoints
             return Results.NotFound();
         }
 
-        logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
         return Results.Ok(unpinned);
     }
 
@@ -415,12 +415,12 @@ public static class PostEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("POST /posts/{PostId}/images called by {UserName}", id, context.User.Identity?.Name);
+        logger.LogInformation("POST /posts/{PostId}/images called by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         // Require admin role
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to add image to post without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to add image to post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -450,7 +450,7 @@ public static class PostEndpoints
             }
 
             logger.LogInformation("Image added to post {PostId} by {UserName}: {ImageUrl}", 
-                id, context.User.Identity?.Name, imageUrl);
+                id, PiiMask.MaskUserName(context.User.Identity?.Name), imageUrl);
             
             var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost, imageStorage);
             return Results.Ok(postWithSignedUrls);
@@ -471,12 +471,12 @@ public static class PostEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("DELETE /posts/{PostId}/images called by {UserName}", id, context.User.Identity?.Name);
+        logger.LogInformation("DELETE /posts/{PostId}/images called by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         // Require admin role
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to remove image from post without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to remove image from post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -494,7 +494,7 @@ public static class PostEndpoints
             await imageStorage.DeleteImageAsync(imageUrl, ct);
 
             logger.LogInformation("Image removed from post {PostId} by {UserName}: {ImageUrl}", 
-                id, context.User.Identity?.Name, imageUrl);
+                id, PiiMask.MaskUserName(context.User.Identity?.Name), imageUrl);
             
             var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost, imageStorage);
             return Results.Ok(postWithSignedUrls);
@@ -521,7 +521,7 @@ public static class PostEndpoints
                 return Results.NotFound($"Post with ID {id} not found");
 
             logger.LogInformation("Tags assigned to post {PostId} by {UserName}: {TagCount} tags", 
-                id, context.User.Identity?.Name, request.TagIds.Count);
+                id, PiiMask.MaskUserName(context.User.Identity?.Name), request.TagIds.Count);
             
             var postWithSignedUrls = GenerateSignedUrlsForPost(post, imageStorage);
             return Results.Ok(postWithSignedUrls);

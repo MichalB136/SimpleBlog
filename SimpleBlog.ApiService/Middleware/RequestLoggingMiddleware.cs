@@ -28,17 +28,18 @@ public sealed class RequestLoggingMiddleware
         }
 
         var correlationId = GetOrCreateCorrelationId(context);
-        var user = context.User?.Identity?.Name ?? "Anonymous";
+        var user = MaskUserName(context.User?.Identity?.Name);
         var method = context.Request.Method;
-        var query = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty;
+        using var scope = _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["CorrelationId"] = correlationId
+        });
 
         _logger.LogInformation(
-            "HTTP {Method} {Path}{Query} started by {User}. CorrelationId: {CorrelationId}",
+            "HTTP {Method} {Path} started by {User}",
             method,
             path,
-            query,
-            user,
-            correlationId);
+            user);
 
         var sw = Stopwatch.StartNew();
         try
@@ -47,25 +48,21 @@ public sealed class RequestLoggingMiddleware
             sw.Stop();
 
             _logger.LogInformation(
-                "HTTP {Method} {Path}{Query} responded {StatusCode} in {ElapsedMs}ms. CorrelationId: {CorrelationId}",
+                "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms",
                 method,
                 path,
-                query,
                 context.Response.StatusCode,
-                sw.ElapsedMilliseconds,
-                correlationId);
+                sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
             sw.Stop();
             _logger.LogError(
                 ex,
-                "HTTP {Method} {Path}{Query} failed after {ElapsedMs}ms. CorrelationId: {CorrelationId}",
+                "HTTP {Method} {Path} failed after {ElapsedMs}ms",
                 method,
                 path,
-                query,
-                sw.ElapsedMilliseconds,
-                correlationId);
+                sw.ElapsedMilliseconds);
             throw;
         }
     }
@@ -90,5 +87,17 @@ public sealed class RequestLoggingMiddleware
 
         context.Response.Headers[headerName] = id;
         return id;
+    }
+
+    private static string MaskUserName(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return "Anonymous";
+        }
+
+        return username.Length <= 2
+            ? $"{username[0]}*"
+            : $"{username[..1]}***";
     }
 }

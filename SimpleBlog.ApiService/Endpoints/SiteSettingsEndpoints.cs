@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using SimpleBlog.Common.Interfaces;
 using SimpleBlog.Common.Logging;
@@ -67,6 +67,7 @@ public static class SiteSettingsEndpoints
                 Guid.Empty,
                 ThemeNames.Light,
                 null,
+                null,
                 DateTimeOffset.UtcNow,
                 "System"
             ));
@@ -92,7 +93,7 @@ public static class SiteSettingsEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("PUT /site-settings called by {UserName}", context.User.Identity?.Name);
+        logger.LogInformation("PUT /site-settings called by {UserName}", PiiMask.MaskUserName(context.User.Identity?.Name));
 
         var validationResult = await validator.ValidateAsync(request, ct);
         if (!validationResult.IsValid)
@@ -102,9 +103,10 @@ public static class SiteSettingsEndpoints
         }
 
         var username = context.User.Identity?.Name ?? "Unknown";
-        var settings = await repository.UpdateAsync(request.Theme, username, ct);
+        var maskedUsername = PiiMask.MaskUserName(username);
+        var settings = await repository.UpdateAsync(request.Theme, request.ContactText, username, ct);
 
-        logger.LogInformation("Site settings updated to theme '{Theme}' by {UserName}", request.Theme, username);
+        logger.LogInformation("Site settings updated to theme '{Theme}' by {UserName}", request.Theme, maskedUsername);
         return Results.Ok(settings);
     }
 
@@ -121,7 +123,7 @@ public static class SiteSettingsEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("POST /site-settings/logo called by {UserName}", context.User.Identity?.Name);
+        logger.LogInformation("POST /site-settings/logo called by {UserName}", PiiMask.MaskUserName(context.User.Identity?.Name));
 
         // Validate file
         if (file.Length == 0)
@@ -149,6 +151,7 @@ public static class SiteSettingsEndpoints
             var logoUrl = await imageStorage.UploadImageAsync(stream, "logo", "logos", ct);
 
             var username = context.User.Identity?.Name ?? "Unknown";
+            var maskedUsername = PiiMask.MaskUserName(username);
             var settings = await repository.UpdateLogoAsync(logoUrl, username, ct);
 
             // Generate signed URL for response
@@ -159,7 +162,7 @@ public static class SiteSettingsEndpoints
                     : null
             };
 
-            logger.LogInformation("Logo uploaded successfully by {UserName}: {LogoUrl}", username, logoUrl);
+            logger.LogInformation("Logo uploaded successfully by {UserName}: {LogoUrl}", maskedUsername, logoUrl);
             return Results.Ok(settingsWithSignedUrl);
         }
         catch (Exception ex)
@@ -176,7 +179,7 @@ public static class SiteSettingsEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("DELETE /site-settings/logo called by {UserName}", context.User.Identity?.Name);
+        logger.LogInformation("DELETE /site-settings/logo called by {UserName}", PiiMask.MaskUserName(context.User.Identity?.Name));
 
         var currentSettings = await repository.GetAsync(ct);
         if (currentSettings?.LogoUrl is null)
@@ -188,9 +191,10 @@ public static class SiteSettingsEndpoints
             logger.LogInformation("Deleted logo: {LogoUrl}", currentSettings.LogoUrl);
 
             var username = context.User.Identity?.Name ?? "Unknown";
+            var maskedUsername = PiiMask.MaskUserName(username);
             var settings = await repository.UpdateLogoAsync(null, username, ct);
 
-            logger.LogInformation("Logo deleted successfully by {UserName}", username);
+            logger.LogInformation("Logo deleted successfully by {UserName}", maskedUsername);
             return Results.Ok(settings); // No logo, so no signed URL needed
         }
         catch (Exception ex)

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SimpleBlog.ApiService.Data;
+using SimpleBlog.Common.Logging;
 using static SimpleBlog.ApiService.SeedDataConstants;
 
 namespace SimpleBlog.ApiService.Seeding;
@@ -77,14 +78,14 @@ public static class IdentitySeeder
         var createResult = await userManager.CreateAsync(newAdmin, password);
         if (!createResult.Succeeded)
         {
-            logger.LogWarning("Failed to create admin user {Username}: {Errors}", username, string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            logger.LogWarning("Failed to create admin user {Username}: {Errors}", PiiMask.MaskUserName(username), string.Join(", ", createResult.Errors.Select(e => e.Description)));
             return;
         }
 
         var roleResult = await userManager.AddToRoleAsync(newAdmin, adminRole);
         if (!roleResult.Succeeded)
         {
-            logger.LogWarning("Failed to assign admin role to {Username}: {Errors}", username, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+            logger.LogWarning("Failed to assign admin role to {Username}: {Errors}", PiiMask.MaskUserName(username), string.Join(", ", roleResult.Errors.Select(e => e.Description)));
         }
     }
 
@@ -116,14 +117,14 @@ public static class IdentitySeeder
         var createResult = await userManager.CreateAsync(newUser, password);
         if (!createResult.Succeeded)
         {
-            logger.LogWarning("Failed to create mock user {Username}: {Errors}", username, string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            logger.LogWarning("Failed to create mock user {Username}: {Errors}", PiiMask.MaskUserName(username), string.Join(", ", createResult.Errors.Select(e => e.Description)));
             return;
         }
 
         var roleResult = await userManager.AddToRoleAsync(newUser, userRole);
         if (!roleResult.Succeeded)
         {
-            logger.LogWarning("Failed to assign user role to {Username}: {Errors}", username, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+            logger.LogWarning("Failed to assign user role to {Username}: {Errors}", PiiMask.MaskUserName(username), string.Join(", ", roleResult.Errors.Select(e => e.Description)));
         }
     }
 }

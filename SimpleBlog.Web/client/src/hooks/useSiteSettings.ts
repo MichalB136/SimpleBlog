@@ -48,6 +48,24 @@ export function useSiteSettings() {
     }
   };
 
+  const updateContactText = async (contactText: string) => {
+    if (!settings?.theme) {
+      return { success: false, error: 'Brak ustawionego motywu' };
+    }
+
+    try {
+      setLoading(true);
+      const data = await siteSettingsApi.update({ theme: settings.theme, contactText });
+      setSettings(data);
+      return { success: true };
+    } catch (err: any) {
+      setError(err.message || 'Failed to update contact text');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const applyTheme = (theme: string) => {
     // Remove all theme classes
     document.documentElement.className = document.documentElement.className
@@ -101,6 +119,7 @@ export function useSiteSettings() {
     loading,
     error,
     updateTheme,
+    updateContactText,
     uploadLogo,
     deleteLogo,
     refresh: fetchSettings,

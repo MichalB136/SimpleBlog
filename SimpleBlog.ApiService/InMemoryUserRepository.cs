@@ -73,6 +73,113 @@ internal sealed class InMemoryUserRepository : IUserRepository
         return Task.FromResult<User?>(null);
     }
 
+    // In-memory store for password reset tokens: token -> (email, expiresUtc)
+    private readonly Dictionary<string, (string Email, DateTime ExpiresUtc)> _passwordResetTokens = new();
+
+    // In-memory store for email confirmation tokens: token -> (email, expiresUtc)
+    private readonly Dictionary<string, (string Email, DateTime ExpiresUtc)> _emailConfirmationTokens = new();
+
+    public Task<(string? Token, string? Error)> GeneratePasswordResetTokenAsync(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return Task.FromResult<(string?, string?)>((null, "Email is required"));
+        }
+
+        // Check if user exists with this email
+        var userExists = _users.Values.Any(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+        if (!userExists)
+        {
+            // Return null without error for security (prevent email enumeration)
+            return Task.FromResult<(string?, string?)>((null, null));
+        }
+
+        // Generate token
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        _passwordResetTokens[token] = (email, DateTime.UtcNow.AddHours(3));
+        
+        return Task.FromResult<(string?, string?)>((token, null));
+    }
+
+    public Task<(bool Success, string? Error)> ResetPasswordAsync(string userId, string token, string newPassword)
+    {
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(newPassword))
+        {
+            return Task.FromResult<(bool, string?)>((false, "Invalid reset token"));
+        }
+
+        if (!_passwordResetTokens.TryGetValue(token, out var tokenInfo))
+        {
+            return Task.FromResult<(bool, string?)>((false, "Invalid or expired reset token"));
+        }
+
+        if (tokenInfo.ExpiresUtc < DateTime.UtcNow)
+        {
+            _passwordResetTokens.Remove(token);
+            return Task.FromResult<(bool, string?)>((false, "Invalid or expired reset token"));
+        }
+
+        // Find user by email and update password
+        var userKey = _users.Keys.FirstOrDefault(k => 
+            _users[k].Email.Equals(tokenInfo.Email, StringComparison.OrdinalIgnoreCase));
+        
+        if (userKey == null)
+        {
+            return Task.FromResult<(bool, string?)>((false, "Invalid or expired reset token"));
+        }
+
+        var userInfo = _users[userKey];
+        _users[userKey] = (newPassword, userInfo.Role, userInfo.Email);
+        _passwordResetTokens.Remove(token);
+
+        return Task.FromResult<(bool, string?)>((true, null));
+    }
+
+    public Task<(string? Token, string? Error)> GenerateEmailConfirmationTokenAsync(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return Task.FromResult<(string?, string?)>((null, "Email is required"));
+        }
+
+        // Check if user exists with this email
+        var userExists = _users.Values.Any(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+        if (!userExists)
+        {
+            // Return null without error for security (prevent email enumeration)
+            return Task.FromResult<(string?, string?)>((null, null));
+        }
+
+        // Generate token
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        _emailConfirmationTokens[token] = (email, DateTime.UtcNow.AddHours(3));
+        
+        return Task.FromResult<(string?, string?)>((token, null));
+    }
+
+    public Task<(bool Success, string? Error)> ConfirmEmailAsync(string userId, string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            return Task.FromResult<(bool, string?)>((false, "Invalid confirmation token"));
+        }
+
+        if (!_emailConfirmationTokens.TryGetValue(token, out var tokenInfo))
+        {
+            return Task.FromResult<(bool, string?)>((false, "Invalid or expired confirmation token"));
+        }
+
+        if (tokenInfo.ExpiresUtc < DateTime.UtcNow)
+        {
+            _emailConfirmationTokens.Remove(token);
+            return Task.FromResult<(bool, string?)>((false, "Invalid or expired confirmation token"));
+        }
+
+        _emailConfirmationTokens.Remove(token);
+        // In-memory repo: just mark as success (no persistent email confirmed flag)
+        return Task.FromResult<(bool, string?)>((true, null));
+    }
+
     /// <summary>
     /// Constant-time string comparison to prevent timing attacks on password validation.
     /// </summary>

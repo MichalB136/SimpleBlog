@@ -80,11 +80,11 @@ public sealed class PostHandler : IPostHandler
 
     public async Task<IResult> Create(HttpContext context, CancellationToken ct)
     {
-        _logger.LogInformation("POST {Endpoint} called by {UserName}", _endpointConfig.Posts.Base, context.User.Identity?.Name);
+        _logger.LogInformation("POST {Endpoint} called by {UserName}", _endpointConfig.Posts.Base, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         if (_authConfig.RequireAdminForPostCreate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to create post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to create post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -127,7 +127,7 @@ public sealed class PostHandler : IPostHandler
     {
         if (_authConfig.RequireAdminForPostUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to update post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to update post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -198,7 +198,7 @@ public sealed class PostHandler : IPostHandler
     {
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to pin post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to pin post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -209,7 +209,7 @@ public sealed class PostHandler : IPostHandler
             return Results.NotFound();
         }
 
-        _logger.LogInformation("Post pinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        _logger.LogInformation("Post pinned: {PostId} by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
         return Results.Ok(pinned);
     }
 
@@ -217,7 +217,7 @@ public sealed class PostHandler : IPostHandler
     {
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to unpin post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to unpin post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -228,17 +228,17 @@ public sealed class PostHandler : IPostHandler
             return Results.NotFound();
         }
 
-        _logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, context.User.Identity?.Name);
+        _logger.LogInformation("Post unpinned: {PostId} by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
         return Results.Ok(unpinned);
     }
 
     public async Task<IResult> AddImageToPost(Guid id, IFormFile file, HttpContext context, CancellationToken ct)
     {
-        _logger.LogInformation("POST /posts/{PostId}/images called by {UserName}", id, context.User.Identity?.Name);
+        _logger.LogInformation("POST /posts/{PostId}/images called by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to add image to post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to add image to post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -264,7 +264,7 @@ public sealed class PostHandler : IPostHandler
                 return Results.NotFound(new { error = "Post not found" });
             }
 
-            _logger.LogInformation("Image added to post {PostId} by {UserName}: {ImageUrl}", id, context.User.Identity?.Name, imageUrl);
+            _logger.LogInformation("Image added to post {PostId} by {UserName}: {ImageUrl}", id, PiiMask.MaskUserName(context.User.Identity?.Name), imageUrl);
 
             var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost);
             return Results.Ok(postWithSignedUrls);
@@ -278,11 +278,11 @@ public sealed class PostHandler : IPostHandler
 
     public async Task<IResult> RemoveImageFromPost(Guid id, string imageUrl, HttpContext context, CancellationToken ct)
     {
-        _logger.LogInformation("DELETE /posts/{PostId}/images called by {UserName}", id, context.User.Identity?.Name);
+        _logger.LogInformation("DELETE /posts/{PostId}/images called by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to remove image from post without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to remove image from post without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -297,7 +297,7 @@ public sealed class PostHandler : IPostHandler
 
             await _imageStorage.DeleteImageAsync(imageUrl, ct);
 
-            _logger.LogInformation("Image removed from post {PostId} by {UserName}: {ImageUrl}", id, context.User.Identity?.Name, imageUrl);
+            _logger.LogInformation("Image removed from post {PostId} by {UserName}: {ImageUrl}", id, PiiMask.MaskUserName(context.User.Identity?.Name), imageUrl);
 
             var postWithSignedUrls = GenerateSignedUrlsForPost(updatedPost);
             return Results.Ok(postWithSignedUrls);
@@ -317,7 +317,7 @@ public sealed class PostHandler : IPostHandler
             if (post is null)
                 return Results.NotFound($"Post with ID {id} not found");
 
-            _logger.LogInformation("Tags assigned to post {PostId} by {UserName}: {TagCount} tags", id, context.User.Identity?.Name, request.TagIds.Count);
+            _logger.LogInformation("Tags assigned to post {PostId} by {UserName}: {TagCount} tags", id, PiiMask.MaskUserName(context.User.Identity?.Name), request.TagIds.Count);
 
             var postWithSignedUrls = GenerateSignedUrlsForPost(post);
             return Results.Ok(postWithSignedUrls);

@@ -53,7 +53,18 @@ public sealed class ProductHandler : IProductHandler
 
         try
         {
+            _logger.LogInformation(
+                "Generating signed URL for product {ProductId}. Original ImageUrl: {ImageUrl}",
+                product.Id,
+                product.ImageUrl);
+                
             var signed = _imageStorage.GenerateSignedUrl(product.ImageUrl, expirationMinutes: 60);
+            
+            _logger.LogInformation(
+                "Generated signed URL for product {ProductId}. Signed ImageUrl: {SignedUrl}",
+                product.Id,
+                signed);
+                
             return product with { ImageUrl = signed };
         }
         catch (Exception ex)
@@ -176,7 +187,7 @@ public sealed class ProductHandler : IProductHandler
     {
         if (_authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            _logger.LogWarning("User {UserName} attempted to assign tags to product without Admin role", context.User.Identity?.Name);
+            _logger.LogWarning("User {UserName} attempted to assign tags to product without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -186,7 +197,7 @@ public sealed class ProductHandler : IProductHandler
             if (product is null)
                 return Results.NotFound($"Product with ID {id} not found");
 
-            _logger.LogInformation("Tags assigned to product {ProductId} by {UserName}: {TagCount} tags", id, context.User.Identity?.Name, request.TagIds.Count);
+            _logger.LogInformation("Tags assigned to product {ProductId} by {UserName}: {TagCount} tags", id, PiiMask.MaskUserName(context.User.Identity?.Name), request.TagIds.Count);
             var productWithSigned = GenerateSignedUrlForProduct(product);
             return Results.Ok(productWithSigned);
         }

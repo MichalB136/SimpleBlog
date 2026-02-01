@@ -49,15 +49,23 @@ public sealed class CloudinaryStorageService(
             }
 
             logger.LogInformation(
-                "Image uploaded successfully to Cloudinary: {PublicId}",
-                uploadResult.PublicId);
+                "Image uploaded successfully to Cloudinary: PublicId={PublicId}, Type={Type}, SecureUrl={SecureUrl}",
+                uploadResult.PublicId,
+                uploadResult.Type,
+                uploadResult.SecureUrl);
 
             // For private images, return only the public_id with a marker prefix
             // We'll generate signed URLs on-demand when retrieving settings
             // Format: cloudinary://public_id
-            return uploadResult.Type == UploadTypePrivate 
+            var returnUrl = uploadResult.Type == UploadTypePrivate 
                 ? $"{CloudinaryUriScheme}{uploadResult.PublicId}"
                 : uploadResult.SecureUrl.ToString();
+                
+            logger.LogInformation(
+                "Returning URL format: {ReturnUrl}",
+                returnUrl);
+                
+            return returnUrl;
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
@@ -133,6 +141,15 @@ public sealed class CloudinaryStorageService(
 
         try
         {
+            // If URL is already a full Cloudinary URL (signed or public), return as-is
+            // This prevents double-signing which causes "s--xxx--/v1/s--yyy--/v1/" pattern
+            if (imageUrl.StartsWith("https://res.cloudinary.com/") || 
+                imageUrl.StartsWith("http://res.cloudinary.com/"))
+            {
+                logger.LogDebug("URL is already a full Cloudinary URL, returning as-is: {ImageUrl}", imageUrl);
+                return imageUrl;
+            }
+
             string publicId;
             string? format = null;
             string deliveryType;
@@ -150,6 +167,10 @@ public sealed class CloudinaryStorageService(
                     format = publicId[(lastDot + 1)..];
                     publicId = publicId[..lastDot];
                 }
+                
+                logger.LogInformation(
+                    "Generating signed URL from internal format. PublicId: {PublicId}, Format: {Format}",
+                    publicId, format ?? "none");
             }
             else
             {
@@ -181,10 +202,11 @@ public sealed class CloudinaryStorageService(
 
             var signedUrl = urlBuilder.BuildUrl(publicId);
 
-            logger.LogDebug(
-                "Generated signed URL for {PublicId} with type {Type}",
+            logger.LogInformation(
+                "Generated signed URL for {PublicId} with type {Type}: {SignedUrl}",
                 publicId,
-                deliveryType);
+                deliveryType,
+                signedUrl);
 
             return signedUrl;
         }

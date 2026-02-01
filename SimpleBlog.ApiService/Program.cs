@@ -140,6 +140,7 @@ static void ConfigurePipeline(WebApplication app, (string Issuer, string Audienc
     app.MapAuthEndpoints(jwtParameters.Issuer, jwtParameters.Audience, jwtParameters.Key);
     app.MapPostEndpoints();
     app.MapAboutMeEndpoints();
+    app.MapAboutEndpoints();
     app.MapProductEndpoints();
     app.MapOrderEndpoints();
     app.MapSiteSettingsEndpoints();

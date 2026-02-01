@@ -444,7 +444,7 @@ public sealed class ValidationTests
     {
         // Arrange
         var validator = new UpdateAboutMeRequestValidator();
-        var request = new UpdateAboutMeRequest(content!);
+        var request = new UpdateAboutMeRequest(content!, null);
 
         // Act
         var result = validator.Validate(request);
@@ -460,7 +460,7 @@ public sealed class ValidationTests
         // Arrange
         var validator = new UpdateAboutMeRequestValidator();
         var longContent = new string('A', 10001); // Exceeds 10000 character limit
-        var request = new UpdateAboutMeRequest(longContent);
+        var request = new UpdateAboutMeRequest(longContent, null);
 
         // Act
         var result = validator.Validate(request);
@@ -475,7 +475,7 @@ public sealed class ValidationTests
     {
         // Arrange
         var validator = new UpdateAboutMeRequestValidator();
-        var request = new UpdateAboutMeRequest("This is valid about me content.");
+        var request = new UpdateAboutMeRequest("This is valid about me content.", null);
 
         // Act
         var result = validator.Validate(request);
@@ -491,7 +491,7 @@ public sealed class ValidationTests
         // Arrange
         var validator = new UpdateAboutMeRequestValidator();
         var maxLengthContent = new string('A', 10000); // Exactly at limit
-        var request = new UpdateAboutMeRequest(maxLengthContent);
+        var request = new UpdateAboutMeRequest(maxLengthContent, null);
 
         // Act
         var result = validator.Validate(request);
@@ -507,7 +507,7 @@ public sealed class ValidationTests
         // Arrange
         var validator = new UpdateAboutMeRequestValidator();
         var contentWithSpecialChars = "Hello! This is my about page. <b>HTML</b> & special chars: 你好, émojis: 😊, etc.";
-        var request = new UpdateAboutMeRequest(contentWithSpecialChars);
+        var request = new UpdateAboutMeRequest(contentWithSpecialChars, null);
 
         // Act
         var result = validator.Validate(request);

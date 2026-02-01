@@ -44,17 +44,19 @@ export function useCart() {
     });
   }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== productId));
+  const removeItem = useCallback((productId: string, selectedColor?: string) => {
+    setItems(prevItems => prevItems.filter(item => !(item.id === productId && item.selectedColor === selectedColor)));
   }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number, selectedColor?: string) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(productId, selectedColor);
     } else {
       setItems(prevItems =>
         prevItems.map(item =>
-          item.id === productId ? { ...item, quantity } : item
+          item.id === productId && item.selectedColor === selectedColor
+            ? { ...item, quantity }
+            : item
         )
       );
     }

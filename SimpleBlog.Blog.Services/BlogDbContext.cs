@@ -41,6 +41,7 @@ public class BlogDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.ImageUrl).HasMaxLength(2048);
             entity.Property(e => e.UpdatedAt).IsRequired();
             entity.Property(e => e.UpdatedBy).IsRequired();
         });
@@ -49,6 +50,7 @@ public class BlogDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Theme).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ContactText).HasMaxLength(5000);
             entity.Property(e => e.UpdatedAt).IsRequired();
             entity.Property(e => e.UpdatedBy).IsRequired().HasMaxLength(100);
         });

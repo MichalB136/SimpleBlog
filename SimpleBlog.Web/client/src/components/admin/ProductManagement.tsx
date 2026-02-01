@@ -34,6 +34,15 @@ export function ProductManagement() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+
+  // Extract unique categories from products
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category).filter((c): c is string => !!c))];
+    return uniqueCategories.sort();
+  }, [products]);
 
   useEffect(() => {
     if (editingProduct) {
@@ -63,6 +72,10 @@ export function ProductManagement() {
     setShowModal(false);
     setEditingProduct(null);
     setForm(emptyForm);
+    // Cleanup preview URLs
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    setSelectedFiles([]);
+    setPreviewUrls([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +103,8 @@ export function ProductManagement() {
         await update(editingProduct.id, payload, form.tagIds);
         setMessage({ type: 'success', text: 'Produkt zaktualizowany' });
       } else {
-        await create(payload, form.tagIds);
+        // When creating, include selected files
+        await create(payload, form.tagIds, selectedFiles.length > 0 ? selectedFiles : undefined);
         setMessage({ type: 'success', text: 'Produkt utworzony' });
       }
       handleCloseModal();
@@ -240,16 +254,60 @@ export function ProductManagement() {
                           disabled={isSaving}
                         />
                       </div>
-                      <div className="col-md-6">
+                      <div className="col-md-6 position-relative">
                         <label className="form-label">Kategoria</label>
                         <input
                           type="text"
                           className="form-control"
                           value={form.category}
-                          onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          onChange={(e) => {
+                            setForm({ ...form, category: e.target.value });
+                            setShowCategoryDropdown(true);
+                          }}
+                          onFocus={() => setShowCategoryDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
                           disabled={isSaving}
-                          placeholder="np. Sukienki, Akcesoria, Koszulki"
+                          placeholder="Wpisz lub wybierz kategorię"
+                          autoComplete="off"
                         />
+                        {showCategoryDropdown && (form.category || categories.length > 0) && (
+                          <ul className="list-group position-absolute w-100 mt-1" style={{ zIndex: 1000 }}>
+                            {categories
+                              .filter((cat) =>
+                                cat.toLowerCase().includes(form.category.toLowerCase())
+                              )
+                              .map((cat) => (
+                                <li
+                                  key={cat}
+                                  className="list-group-item list-group-item-action cursor-pointer"
+                                  onClick={() => {
+                                    setForm({ ...form, category: cat });
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  {cat}
+                                </li>
+                              ))}
+                            {form.category &&
+                              !categories.includes(form.category) && (
+                                <li
+                                  className="list-group-item list-group-item-action list-group-item-info"
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <i className="bi bi-plus-circle"></i> Nowa kategoria: <strong>{form.category}</strong>
+                                </li>
+                              )}
+                            {categories.filter((cat) =>
+                              cat.toLowerCase().includes(form.category.toLowerCase())
+                            ).length === 0 &&
+                              !form.category && (
+                                <li className="list-group-item text-muted text-center" style={{ fontSize: '0.9rem' }}>
+                                  Dostępne kategorie
+                                </li>
+                              )}
+                          </ul>
+                        )}
                       </div>
                       <div className="col-12">
                         <label className="form-label">Opis *</label>
@@ -289,6 +347,19 @@ export function ProductManagement() {
                       </div>
                       <div className="col-md-4">
                         <label className="form-label">URL zdjęcia</label>
+                        {editingProduct && form.imageUrl && (
+                          <div className="mb-2">
+                            <img 
+                              src={form.imageUrl} 
+                              alt="Obecny obraz produktu" 
+                              className="img-thumbnail"
+                              style={{ maxHeight: '150px', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
                         <input
                           type="url"
                           className="form-control"
@@ -301,11 +372,11 @@ export function ProductManagement() {
                     </div>
 
                     <div className="col-12 mt-2">
-                      <ProductThumbnailUpload
-                        productId={editingProduct ? editingProduct.id : null}
-                        onUploaded={async (imageUrl: string) => {
-                          setForm((f) => ({ ...f, imageUrl }));
-                          if (editingProduct) {
+                      {editingProduct ? (
+                        <ProductThumbnailUpload
+                          productId={editingProduct.id}
+                          onUploaded={async (imageUrl: string) => {
+                            setForm((f) => ({ ...f, imageUrl }));
                             setIsSaving(true);
                             try {
                               const payload = {
@@ -325,10 +396,81 @@ export function ProductManagement() {
                             } finally {
                               setIsSaving(false);
                             }
-                          }
-                        }}
-                        disabled={isSaving}
-                      />
+                          }}
+                          disabled={isSaving}
+                        />
+                      ) : (
+                        <div>
+                          <label className="form-label">Zdjęcia produktu (opcjonalne)</label>
+                          <input
+                            type="file"
+                            className="form-control"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            multiple
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              
+                              // Validate file sizes
+                              const maxSize = 10 * 1024 * 1024; // 10 MB
+                              const invalidFiles = files.filter(f => f.size > maxSize);
+                              if (invalidFiles.length > 0) {
+                                setMessage({ type: 'error', text: `Niektóre pliki przekraczają limit 10 MB: ${invalidFiles.map(f => f.name).join(', ')}` });
+                                return;
+                              }
+
+                              // Validate file types
+                              const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                              const invalidTypes = files.filter(f => !allowedTypes.includes(f.type));
+                              if (invalidTypes.length > 0) {
+                                setMessage({ type: 'error', text: `Niektóre pliki mają nieprawidłowy typ: ${invalidTypes.map(f => f.name).join(', ')}` });
+                                return;
+                              }
+
+                              setSelectedFiles(files);
+                              
+                              // Create local previews
+                              const previews = files.map(file => URL.createObjectURL(file));
+                              setPreviewUrls(previews);
+                              setMessage(null);
+                            }}
+                            disabled={isSaving}
+                          />
+                          <small className="text-muted">
+                            Maksymalnie 10 MB na plik. Formaty: JPEG, PNG, GIF, WebP
+                          </small>
+                          
+                          {previewUrls.length > 0 && (
+                            <div className="mt-3">
+                              <h6>Podgląd ({previewUrls.length} {previewUrls.length === 1 ? 'zdjęcie' : 'zdjęć'}):</h6>
+                              <div className="row g-2">
+                                {previewUrls.map((url, index) => (
+                                  <div key={index} className="col-4 position-relative">
+                                    <img 
+                                      src={url} 
+                                      alt={`Podgląd ${index + 1}`} 
+                                      className="img-thumbnail w-100" 
+                                      style={{ height: '150px', objectFit: 'cover' }}
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                      onClick={() => {
+                                        URL.revokeObjectURL(url);
+                                        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+                                        setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+                                      }}
+                                      disabled={isSaving}
+                                      title="Usuń zdjęcie"
+                                    >
+                                      <i className="bi bi-x"></i>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-3">

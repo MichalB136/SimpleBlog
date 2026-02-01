@@ -163,6 +163,24 @@ public sealed class OperationLogger : IOperationLogger
 
     private string GetCurrentUserName()
     {
-        return _httpContextAccessor?.HttpContext?.User?.Identity?.Name ?? "System";
+        var name = _httpContextAccessor?.HttpContext?.User?.Identity?.Name ?? "System";
+        return MaskUserName(name);
+    }
+
+    private static string MaskUserName(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return "unknown";
+        }
+
+        if (username.Equals("System", StringComparison.OrdinalIgnoreCase))
+        {
+            return "System";
+        }
+
+        return username.Length <= 2
+            ? $"{username[0]}*"
+            : $"{username[..1]}***";
     }
 }

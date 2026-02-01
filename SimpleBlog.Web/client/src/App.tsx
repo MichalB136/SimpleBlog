@@ -14,6 +14,8 @@ import { CheckoutPage } from '@/components/shop/CheckoutPage';
 import { ContactPage } from '@/components/common/ContactPage';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { PasswordResetForm } from '@/components/auth/PasswordResetForm';
+import { ConfirmEmailForm } from '@/components/auth/ConfirmEmailForm';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { useAuth } from '@/context/AuthContext';
 import { useState } from 'react';
@@ -111,7 +113,7 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-vh-100 d-flex flex-column">
-        <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
+        <Header title="" subtitle="" />
         <div className="container my-4">
           <Routes>
             <Route path="/register" element={
@@ -134,6 +136,36 @@ function AppContent() {
                 <RegisterForm onSuccess={() => navigate('/login')} />
               </>
             } />
+            <Route path="/reset-password" element={
+              <>
+                <button
+                  className="btn btn-outline-secondary w-100 mb-4"
+                  onClick={() => navigate('/login')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Powrót do logowania
+                </button>
+                <PasswordResetForm 
+                  onSuccess={() => navigate('/login')}
+                  onCancel={() => navigate('/login')}
+                />
+              </>
+            } />
+            <Route path="/confirm-email" element={
+              <>
+                <button
+                  className="btn btn-outline-secondary w-100 mb-4"
+                  onClick={() => navigate('/login')}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Powrót do logowania
+                </button>
+                <ConfirmEmailForm 
+                  onSuccess={() => navigate('/login')}
+                  onCancel={() => navigate('/login')}
+                />
+              </>
+            } />
             <Route path="*" element={
               <>
                 <ul className="nav nav-tabs mb-4">
@@ -151,7 +183,9 @@ function AppContent() {
                     </button>
                   </li>
                 </ul>
-                <LoginForm />
+                <LoginForm 
+                  onForgotPassword={() => navigate('/reset-password')}
+                />
               </>
             } />
           </Routes>
@@ -169,7 +203,7 @@ function AppContent() {
 
   return (
     <div className="min-vh-100 d-flex flex-column">
-      <Header title="SimpleBlog" subtitle="Ręcznie robione ubrania na zamówienie" />
+      <Header title="" subtitle="" />
       <div className="container-fluid flex-grow-1 d-flex flex-column">
         <Navigation onLogout={handleLogout} />
         <div className="flex-grow-1">

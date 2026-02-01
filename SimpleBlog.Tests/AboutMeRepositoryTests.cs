@@ -64,7 +64,7 @@ public sealed class AboutMeRepositoryTests
         await using var context = CreateInMemoryContext();
         var repository = new EfAboutMeRepository(context, new NoOpOperationLogger());
         
-        var request = new UpdateAboutMeRequest("New about me content");
+        var request = new UpdateAboutMeRequest("New about me content", null);
         var updatedBy = "AdminUser";
 
         // Act
@@ -102,7 +102,7 @@ public sealed class AboutMeRepositoryTests
         context.AboutMe.Add(originalEntity);
         await context.SaveChangesAsync();
         
-        var request = new UpdateAboutMeRequest("Updated content");
+        var request = new UpdateAboutMeRequest("Updated content", null);
         var updatedBy = "UpdaterUser";
 
         // Act
@@ -129,7 +129,7 @@ public sealed class AboutMeRepositoryTests
         var repository = new EfAboutMeRepository(context, new NoOpOperationLogger());
         
         var longContent = new string('A', 5000);
-        var request = new UpdateAboutMeRequest(longContent);
+        var request = new UpdateAboutMeRequest(longContent, null);
         var updatedBy = "TestUser";
 
         // Act

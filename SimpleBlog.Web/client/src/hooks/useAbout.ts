@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { About } from '@/types/about';
 import { aboutApi } from '@/api/about';
+import { siteSettingsApi } from '@/api/siteSettings';
 
 export function useAbout() {
   const [about, setAbout] = useState<About | null>(null);
@@ -24,9 +25,9 @@ export function useAbout() {
   }, [refresh]);
 
   const update = useCallback(
-    async (content: string) => {
+    async (content: string, imageUrl?: string | null) => {
       try {
-        const updated = await aboutApi.update({ content });
+        const updated = await aboutApi.update({ content, imageUrl: imageUrl ?? null });
         setAbout(updated);
         return updated;
       } catch (err) {
@@ -37,5 +38,33 @@ export function useAbout() {
     []
   );
 
-  return { about, loading, error, refresh, update, setError };
+  const uploadImage = useCallback(async (file: File) => {
+    try {
+      setLoading(true);
+      const updated = await siteSettingsApi.uploadAboutImage(file);
+      setAbout(updated);
+      return { success: true };
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload image');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteImage = useCallback(async () => {
+    try {
+      setLoading(true);
+      const updated = await siteSettingsApi.deleteAboutImage();
+      setAbout(updated);
+      return { success: true };
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete image');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { about, loading, error, refresh, update, uploadImage, deleteImage, setError };
 }

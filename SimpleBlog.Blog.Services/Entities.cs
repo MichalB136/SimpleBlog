@@ -49,6 +49,7 @@ public class AboutMeEntity
 {
     public Guid Id { get; set; }
     public string Content { get; set; } = null!;
+    public string? ImageUrl { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public string UpdatedBy { get; set; } = null!;
 }
@@ -58,6 +59,7 @@ public class SiteSettingsEntity
     public Guid Id { get; set; }
     public string Theme { get; set; } = null!;
     public string? LogoUrl { get; set; }
+    public string? ContactText { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public string UpdatedBy { get; set; } = null!;
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { User, LoginRequest, RegisterRequest } from '@/types/auth';
 import { authApi } from '@/api/auth';
+import { ApiError } from '@/api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -52,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.register(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      // Don't set error here for validation errors - let the component handle it
+      // Only set error for non-validation errors
+      if (!(err instanceof ApiError)) {
+        setError(err instanceof Error ? err.message : 'Registration failed');
+      }
       throw err;
     } finally {
       setLoading(false);

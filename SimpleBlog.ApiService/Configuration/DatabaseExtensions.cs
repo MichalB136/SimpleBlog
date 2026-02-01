@@ -31,6 +31,10 @@ public static class DatabaseExtensions
             .AddSignInManager()
             .AddDefaultTokenProviders();
 
+        // Configure token lifespan (3 hours for password reset and email confirmation tokens)
+        builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+            options.TokenLifespan = TimeSpan.FromHours(3));
+
         // Register DbContext aliases for repositories
         builder.Services.AddScoped<BlogDbContext>(sp => 
         {

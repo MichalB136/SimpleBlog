@@ -11,6 +11,13 @@ public record RegisterResponse(bool Success, string? Message);
 public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);
 
+// Password reset and email confirmation
+public record RequestPasswordResetRequest(string Email);
+public record PasswordResetRequest(string UserId, string Token, string NewPassword);
+public record ConfirmEmailRequest(string UserId, string Token);
+public record SendEmailConfirmationRequest(string Email);
+public record OperationResponse(bool Success, string? Message);
+
 // Post DTOs
 public record CreatePostRequest(
     string Title,
@@ -31,7 +38,8 @@ public record CreateCommentRequest(
 
 // AboutMe DTOs
 public record UpdateAboutMeRequest(
-    string Content
+    string Content,
+    string? ImageUrl
 );
 
 // Tag DTOs

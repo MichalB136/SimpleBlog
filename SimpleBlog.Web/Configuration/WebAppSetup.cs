@@ -180,6 +180,7 @@ public static class WebAppSetup
         MapProductEndpoints(api);
         MapOrderEndpoints(api);
         MapAboutMeEndpoints(api);
+        MapAboutImageEndpoints(api);
         MapSiteSettingsEndpoints(api);
     }
 
@@ -192,6 +193,18 @@ public static class WebAppSetup
         api.MapPost(EndpointPaths.Register,
             async (RegisterRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
                 await ApiProxyHelper.ProxyPostRequest(factory, EndpointPaths.Register, request, null, logger));
+
+        api.MapPost("/request-password-reset",
+            async (RequestPasswordResetRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyPostRequest(factory, "/auth/request-password-reset", request, null, logger));
+
+        api.MapPost("/reset-password",
+            async (PasswordResetRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyPostRequest(factory, "/auth/reset-password", request, null, logger));
+
+        api.MapPost("/confirm-email",
+            async (ConfirmEmailRequest request, IHttpClientFactory factory, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyPostRequest(factory, "/auth/confirm-email", request, null, logger));
     }
 
     private static void MapPostEndpoints(RouteGroupBuilder api)
@@ -386,6 +399,17 @@ public static class WebAppSetup
         api.MapPut(EndpointPaths.AboutMe,
             async (UpdateAboutMeRequest request, IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
                 await ApiProxyHelper.ProxyPutRequest(factory, EndpointPaths.AboutMe, request, context, logger));
+    }
+
+    private static void MapAboutImageEndpoints(RouteGroupBuilder api)
+    {
+        api.MapPost("/about/image",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyFormDataRequest(factory, "/about/image", context, logger));
+
+        api.MapDelete("/about/image",
+            async (IHttpClientFactory factory, HttpContext context, ILogger<Program> logger) =>
+                await ApiProxyHelper.ProxyDeleteRequest(factory, "/about/image", context, logger));
     }
 
     private static void MapSiteSettingsEndpoints(RouteGroupBuilder api)

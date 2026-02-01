@@ -18,9 +18,6 @@ public static class JwtExtensions
         var jwtAudience = jwtConfig["Audience"] ?? "SimpleBlog";
         var key = Encoding.UTF8.GetBytes(jwtKey);
 
-        var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("JwtConfiguration");
-        logger.LogInformation("JWT Config - Key length: {KeyLength}, Issuer: {Issuer}, Audience: {Audience}", jwtKey.Length, jwtIssuer, jwtAudience);
-
         builder.Services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -33,14 +30,15 @@ public static class JwtExtensions
                 OnAuthenticationFailed = context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogError("JWT Authentication failed: {Error}", context.Exception.Message);
+                    logger.LogError(context.Exception, "JWT authentication failed.");
                     return Task.CompletedTask;
                 },
                 OnTokenValidated = context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    var claims = context.Principal?.Claims.Select(c => $"{c.Type}={c.Value}");
-                    logger.LogInformation("JWT Token validated successfully. Claims: {Claims}", string.Join(", ", claims ?? Array.Empty<string>()));
+                    var subject = MaskSubject(context.Principal?.Identity?.Name);
+                    var claimsCount = context.Principal?.Claims?.Count() ?? 0;
+                    logger.LogInformation("JWT token validated. Subject: {Subject}, ClaimsCount: {ClaimsCount}", subject, claimsCount);
                     return Task.CompletedTask;
                 }
             };
@@ -62,5 +60,17 @@ public static class JwtExtensions
                 policy.RequireRole(AdminRole));
 
         return (jwtIssuer, jwtAudience, key);
+    }
+
+    private static string MaskSubject(string? subject)
+    {
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            return "unknown";
+        }
+
+        return subject.Length <= 2
+            ? $"{subject[0]}*"
+            : $"{subject[..1]}***";
     }
 }

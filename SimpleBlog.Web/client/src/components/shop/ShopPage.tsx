@@ -16,6 +16,8 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
   const navigate = useNavigate();
   const [addedProduct, setAddedProduct] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [selectedColors, setSelectedColors] = useState<Record<string, string>>({});
+  const [modalSelectedColor, setModalSelectedColor] = useState<string | undefined>(undefined);
 
   // Extract unique categories
   const categories = useMemo(() => {
@@ -26,7 +28,8 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
   const handleAddToCart = (e: React.MouseEvent, product: any) => {
     e.stopPropagation();
     const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0] : undefined;
-    addItem(product, 1, defaultColor);
+    const chosenColor = selectedColors[product.id] ?? defaultColor;
+    addItem(product, 1, chosenColor);
     setAddedProduct(product.id);
 
     // Show notification for 2 seconds
@@ -63,9 +66,17 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
         </div>
       ) : (
       <div className="row g-4">
-        {products.map((product) => (
+        {products.map((product) => {
+          const productColors = product.colors ?? [];
+          const defaultColor = productColors[0];
+          const selectedColor = selectedColors[product.id] ?? defaultColor;
+
+          return (
           <div key={product.id} className="col-12 col-md-6 col-lg-6">
-            <div className="card shadow-sm h-100 position-relative product-card" style={{ cursor: 'pointer' }} onClick={() => setSelectedProduct(product)}>
+            <div className="card shadow-sm h-100 position-relative product-card" style={{ cursor: 'pointer' }} onClick={() => {
+              setSelectedProduct(product);
+              setModalSelectedColor(selectedColors[product.id] ?? defaultColor);
+            }}>
               {product.imageUrl && (
                 <img
                   src={product.imageUrl}
@@ -81,14 +92,33 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
                   </div>
                 )}
                 <h5 className="card-title">{product.name}</h5>
-                {product.colors && product.colors.length > 0 && (
-                  <div className="d-flex align-items-center mb-2">
-                    {product.colors[0].startsWith('http') ? (
-                      <div className="color-swatch me-2" style={{ width: 20, height: 20 }}><img src={product.colors[0]} alt="default-color" style={{ width: 20, height: 20, objectFit: 'cover' }} /></div>
-                    ) : (
-                      <div className="color-swatch me-2" style={{ width: 20, height: 20, backgroundColor: product.colors[0] }} />
-                    )}
-                    <small className="text-muted">{getColorName(product.colors[0])}</small>
+                {productColors.length > 0 && (
+                  <div className="mb-2">
+                    <div className="d-flex flex-wrap gap-2">
+                      {productColors.map((c: string, i: number) => {
+                        const isSelected = selectedColor === c;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            className="border-0 bg-transparent p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedColors(prev => ({ ...prev, [product.id]: c }));
+                            }}
+                            aria-pressed={isSelected}
+                            title={getColorName(c)}
+                          >
+                            {c.startsWith('http') ? (
+                              <div className="color-swatch" style={{ outline: isSelected ? '2px solid #0d6efd' : '2px solid transparent' }}><img className="color-swatch-img" src={c} alt={`color-${i}`} /></div>
+                            ) : (
+                              <div className="color-swatch" style={{ backgroundColor: c, outline: isSelected ? '2px solid #0d6efd' : '2px solid transparent' }} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <small className="text-muted">{getColorName(selectedColor)}</small>
                   </div>
                 )}
                 {product.tags && product.tags.length > 0 && (
@@ -118,7 +148,8 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
               </div>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
       )}
       {selectedProduct && (
@@ -191,11 +222,11 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
                           <div className="mb-3">
                             <div className="color-swatches">
                               {selectedProduct.colors.map((c: string, i: number) => (
-                                <div key={i} className="d-flex align-items-center me-3" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); /* local selection not persisted for modal quick-add */ }}>
+                                <div key={i} className="d-flex align-items-center me-3" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setModalSelectedColor(c); }}>
                                   {c.startsWith('http') ? (
-                                    <div className="color-swatch" title={c}><img className="color-swatch-img" src={c} alt={`color-${i}`} /></div>
+                                    <div className="color-swatch" title={c} style={{ outline: modalSelectedColor === c ? '2px solid #0d6efd' : '2px solid transparent' }}><img className="color-swatch-img" src={c} alt={`color-${i}`} /></div>
                                   ) : (
-                                    <div className="color-swatch" title={c} style={{ backgroundColor: c }} />
+                                    <div className="color-swatch" title={c} style={{ backgroundColor: c, outline: modalSelectedColor === c ? '2px solid #0d6efd' : '2px solid transparent' }} />
                                   )}
                                   <div className="color-swatch-label">{getColorName(c)}</div>
                                 </div>
@@ -214,7 +245,8 @@ export function ShopPage({ onViewCart }: ShopPageProps) {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const defaultColor = selectedProduct.colors && selectedProduct.colors.length > 0 ? selectedProduct.colors[0] : undefined;
-                                addItem(selectedProduct, 1, defaultColor);
+                                const chosenColor = modalSelectedColor ?? defaultColor;
+                                addItem(selectedProduct, 1, chosenColor);
                                 setSelectedProduct(null);
                               }}
                             >

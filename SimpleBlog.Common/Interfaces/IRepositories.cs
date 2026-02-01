@@ -36,6 +36,7 @@ public interface IAboutMeRepository
 {
     Task<AboutMe?> GetAsync();
     Task<AboutMe> UpdateAsync(UpdateAboutMeRequest request, string updatedBy);
+    Task<AboutMe> UpdateImageAsync(string? imageUrl, string updatedBy);
 }
 
 public interface IProductRepository
@@ -75,11 +76,17 @@ public interface IUserRepository
     Task<string?> GetUsernameByRefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokenAsync(string refreshToken);
     Task<User?> GetUserByUsernameAsync(string username);
+    
+    // Password reset and email confirmation
+    Task<(string? Token, string? Error)> GeneratePasswordResetTokenAsync(string email);
+    Task<(bool Success, string? Error)> ResetPasswordAsync(string userId, string token, string newPassword);
+    Task<(string? Token, string? Error)> GenerateEmailConfirmationTokenAsync(string email);
+    Task<(bool Success, string? Error)> ConfirmEmailAsync(string userId, string token);
 }
 
 public interface ISiteSettingsRepository
 {
     Task<SiteSettings?> GetAsync(CancellationToken ct = default);
-    Task<SiteSettings> UpdateAsync(string theme, string updatedBy, CancellationToken ct = default);
+    Task<SiteSettings> UpdateAsync(string theme, string? contactText, string updatedBy, CancellationToken ct = default);
     Task<SiteSettings> UpdateLogoAsync(string? logoUrl, string updatedBy, CancellationToken ct = default);
 }

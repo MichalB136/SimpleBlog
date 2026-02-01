@@ -18,26 +18,41 @@ public static class AboutMeEndpoints
         aboutMe.MapPut(endpointConfig.AboutMe.Update, Update).RequireAuthorization();
     }
 
-    private static async Task<IResult> Get(IAboutMeRepository repository)
+    private static async Task<IResult> Get(
+        IAboutMeRepository repository,
+        IImageStorageService imageStorage)
     {
         var aboutMe = await repository.GetAsync();
-        return aboutMe is not null ? Results.Ok(aboutMe) : Results.NotFound();
+        if (aboutMe is null)
+        {
+            return Results.NotFound();
+        }
+
+        var aboutWithSignedUrl = aboutMe with
+        {
+            ImageUrl = aboutMe.ImageUrl is not null
+                ? imageStorage.GenerateSignedUrl(aboutMe.ImageUrl, expirationMinutes: 60)
+                : null
+        };
+
+        return Results.Ok(aboutWithSignedUrl);
     }
 
     private static async Task<IResult> Update(
         UpdateAboutMeRequest request,
         IValidator<UpdateAboutMeRequest> validator,
         IAboutMeRepository repository,
+        IImageStorageService imageStorage,
         IOperationLogger operationLogger,
         HttpContext context,
         ILogger<Program> logger)
     {
-        logger.LogInformation("PUT /aboutme called by {UserName}", context.User.Identity?.Name);
+        logger.LogInformation("PUT /aboutme called by {UserName}", PiiMask.MaskUserName(context.User.Identity?.Name));
         
         // Require admin role to update AboutMe
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to update AboutMe without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to update AboutMe without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -50,9 +65,17 @@ public static class AboutMeEndpoints
         }
 
         var username = context.User.Identity?.Name ?? "Unknown";
+        var maskedUsername = PiiMask.MaskUserName(username);
         var updated = await repository.UpdateAsync(request, username);
+
+        var updatedWithSignedUrl = updated with
+        {
+            ImageUrl = updated.ImageUrl is not null
+                ? imageStorage.GenerateSignedUrl(updated.ImageUrl, expirationMinutes: 60)
+                : null
+        };
         
-        logger.LogInformation("AboutMe updated by {UserName}", username);
-        return Results.Ok(updated);
+        logger.LogInformation("AboutMe updated by {UserName}", maskedUsername);
+        return Results.Ok(updatedWithSignedUrl);
     }
 }

@@ -7,6 +7,7 @@ public sealed record SiteSettings(
     Guid Id,
     string Theme,
     string? LogoUrl,
+    string? ContactText,
     DateTimeOffset UpdatedAt,
     string UpdatedBy
 );
@@ -15,7 +16,8 @@ public sealed record SiteSettings(
 /// Request model for updating site settings
 /// </summary>
 public sealed record UpdateSiteSettingsRequest(
-    string Theme
+    string Theme,
+    string? ContactText
 );
 
 /// <summary>

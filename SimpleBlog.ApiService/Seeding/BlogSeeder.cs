@@ -121,6 +121,7 @@ public static class BlogSeeder
             {
                 Id = Guid.NewGuid(),
                 Content = "Witaj w SimpleBlog! Jestem pasjonatką mody i szycia. Od lat tworzę unikalne, ręcznie szyte ubrania, które łączą wygodę, styl i wysoką jakość. Każda kreacja jest tworzona z myślą o Tobie - indywidualnie, z pasją i dbałością o każdy detal. Zapraszam do odkrywania mojej kolekcji!",
+                ImageUrl = null,
                 UpdatedAt = DateTimeOffset.UtcNow,
                 UpdatedBy = SeedDataConstants.SystemUsername
             };
@@ -139,6 +140,7 @@ public static class BlogSeeder
                 Id = Guid.NewGuid(),
                 Theme = "light",
                 LogoUrl = null,
+                ContactText = "Masz pytania o ręcznie robione ubrania? Napisz do nas — odpowiadamy szybko i z przyjemnością doradzimy.",
                 UpdatedAt = DateTimeOffset.UtcNow,
                 UpdatedBy = SeedDataConstants.SystemUsername
             };

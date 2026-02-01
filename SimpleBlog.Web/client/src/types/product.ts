@@ -35,6 +35,7 @@ export interface CreateProductRequest {
   price: number;
   stock: number;
   imageUrl?: string;
+  category?: string;
 }
 
 export interface UpdateProductRequest {

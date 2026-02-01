@@ -26,9 +26,9 @@ export function useProducts() {
   }, [refresh]);
 
   const create = useCallback(
-    async (payload: any, tagIds?: string[]) => {
+    async (payload: any, tagIds?: string[], files?: File[]) => {
       try {
-        const created = await productsApi.create(payload);
+        const created = await productsApi.create(payload, files);
         if (tagIds && tagIds.length > 0) {
           await productsApi.assignTags(created.id, tagIds);
         }

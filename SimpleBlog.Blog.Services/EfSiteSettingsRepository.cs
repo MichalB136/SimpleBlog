@@ -21,16 +21,20 @@ public sealed class EfSiteSettingsRepository : ISiteSettingsRepository
 
         return entity is null 
             ? null 
-            : new SiteSettings(entity.Id, entity.Theme, entity.LogoUrl, entity.UpdatedAt, entity.UpdatedBy);
+            : new SiteSettings(entity.Id, entity.Theme, entity.LogoUrl, entity.ContactText, entity.UpdatedAt, entity.UpdatedBy);
     }
 
-    public async Task<SiteSettings> UpdateAsync(string theme, string updatedBy, CancellationToken ct = default)
+    public async Task<SiteSettings> UpdateAsync(string theme, string? contactText, string updatedBy, CancellationToken ct = default)
     {
         var existing = await _context.SiteSettings.FirstOrDefaultAsync(ct);
         
         if (existing is not null)
         {
             existing.Theme = theme;
+            if (contactText is not null)
+            {
+                existing.ContactText = contactText;
+            }
             existing.UpdatedAt = DateTimeOffset.UtcNow;
             existing.UpdatedBy = updatedBy;
         }
@@ -40,6 +44,7 @@ public sealed class EfSiteSettingsRepository : ISiteSettingsRepository
             {
                 Id = Guid.NewGuid(),
                 Theme = theme,
+                ContactText = contactText,
                 UpdatedAt = DateTimeOffset.UtcNow,
                 UpdatedBy = updatedBy
             };
@@ -48,7 +53,7 @@ public sealed class EfSiteSettingsRepository : ISiteSettingsRepository
 
         await _context.SaveChangesAsync(ct);
         
-        return new SiteSettings(existing.Id, existing.Theme, existing.LogoUrl, existing.UpdatedAt, existing.UpdatedBy);
+        return new SiteSettings(existing.Id, existing.Theme, existing.LogoUrl, existing.ContactText, existing.UpdatedAt, existing.UpdatedBy);
     }
 
     public async Task<SiteSettings> UpdateLogoAsync(string? logoUrl, string updatedBy, CancellationToken ct = default)
@@ -68,6 +73,7 @@ public sealed class EfSiteSettingsRepository : ISiteSettingsRepository
                 Id = Guid.NewGuid(),
                 Theme = "light",
                 LogoUrl = logoUrl,
+                ContactText = null,
                 UpdatedAt = DateTimeOffset.UtcNow,
                 UpdatedBy = updatedBy
             };
@@ -76,6 +82,6 @@ public sealed class EfSiteSettingsRepository : ISiteSettingsRepository
 
         await _context.SaveChangesAsync(ct);
         
-        return new SiteSettings(existing.Id, existing.Theme, existing.LogoUrl, existing.UpdatedAt, existing.UpdatedBy);
+        return new SiteSettings(existing.Id, existing.Theme, existing.LogoUrl, existing.ContactText, existing.UpdatedAt, existing.UpdatedBy);
     }
 }

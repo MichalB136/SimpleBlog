@@ -32,6 +32,7 @@ public record Comment(
 public record AboutMe(
     Guid Id,
     string Content,
+    string? ImageUrl,
     DateTimeOffset UpdatedAt,
     string UpdatedBy
 );

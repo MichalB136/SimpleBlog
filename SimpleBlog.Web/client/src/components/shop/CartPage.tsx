@@ -38,7 +38,7 @@ export function CartPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr key={`${item.id}-${item.selectedColor ?? 'default'}`}>
                   <td>
                     <strong>{item.name}</strong>
                     {item.description && (
@@ -60,7 +60,7 @@ export function CartPage() {
                     <div className="input-group input-group-sm" style={{ maxWidth: '120px' }}>
                       <button
                         className="btn btn-outline-secondary"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedColor)}
                       >
                         −
                       </button>
@@ -72,7 +72,7 @@ export function CartPage() {
                       />
                       <button
                         className="btn btn-outline-secondary"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedColor)}
                       >
                         +
                       </button>
@@ -84,7 +84,7 @@ export function CartPage() {
                   <td>
                     <button
                       className="btn btn-sm btn-danger"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.id, item.selectedColor)}
                       title="Usuń z koszyka"
                     >
                       <i className="bi bi-trash me-1"></i>Usuń

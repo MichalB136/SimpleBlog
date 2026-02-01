@@ -9,6 +9,16 @@ namespace SimpleBlog.ApiService.Endpoints;
 
 public static class ProductEndpoints
 {
+    private sealed record CreateProductDependencies(
+        IProductRepository Repository,
+        IImageStorageService ImageStorage,
+        IValidator<CreateProductRequest> Validator,
+        IOperationLogger OperationLogger,
+        HttpContext HttpContext,
+        ILogger<Program> Logger,
+        AuthorizationConfiguration AuthConfig,
+        EndpointConfiguration EndpointConfig);
+
     private sealed record UpdateProductDependencies(
         Guid Id,
         UpdateProductRequest Request,
@@ -27,7 +37,10 @@ public static class ProductEndpoints
 
         products.MapGet(endpointConfig.Products.GetAll, (IProductHandler handler, HttpContext ctx) => handler.GetAll(ctx));
         products.MapGet(endpointConfig.Products.GetById, (IProductHandler handler, Guid id, HttpContext ctx) => handler.GetById(id, ctx));
-        products.MapPost(endpointConfig.Products.Create, (IProductHandler handler, CreateProductRequest req) => handler.Create(req)).RequireAuthorization();
+        products.MapPost(endpointConfig.Products.Create, 
+            ([AsParameters] CreateProductDependencies deps, CancellationToken ct) => Create(deps, ct))
+            .RequireAuthorization()
+            .DisableAntiforgery(); // Allow multipart/form-data without antiforgery cookie (API uses JWT auth)
         products.MapPut(endpointConfig.Products.Update, (IProductHandler handler, Guid id, UpdateProductRequest req, HttpContext ctx) => handler.Update(id, req, ctx)).RequireAuthorization();
         products.MapDelete(endpointConfig.Products.Delete, (IProductHandler handler, Guid id, HttpContext ctx) => handler.Delete(id, ctx)).RequireAuthorization();
         products.MapPut("/{id:guid}/tags", (IProductHandler handler, Guid id, AssignTagsRequest req, HttpContext ctx) => handler.AssignTags(id, req, ctx)).RequireAuthorization();
@@ -92,14 +105,154 @@ public static class ProductEndpoints
     }
 
     private static async Task<IResult> Create(
-        CreateProductRequest request,
-        IProductRepository repository,
-        ILogger<Program> logger,
-        EndpointConfiguration endpointConfig)
+        CreateProductDependencies deps,
+        CancellationToken ct)
     {
-        var created = await repository.CreateAsync(request);
-        logger.LogInformation("Product created: {ProductId}", created.Id);
-        return Results.Created($"{endpointConfig.Products.Base}/{created.Id}", created);
+        deps.Logger.LogInformation("POST {Endpoint} called by {UserName}", deps.EndpointConfig.Products.Base, PiiMask.MaskUserName(deps.HttpContext.User.Identity?.Name));
+
+        // Check authorization
+        if (deps.AuthConfig.RequireAdminForProductCreate && !deps.HttpContext.User.IsInRole(SeedDataConstants.AdminRole))
+        {
+            deps.Logger.LogWarning("User {UserName} attempted to create product without Admin role", PiiMask.MaskUserName(deps.HttpContext.User.Identity?.Name));
+            return Results.Forbid();
+        }
+
+        // Parse request from form or JSON
+        var (request, files) = await ParseCreateProductRequestAsync(deps.HttpContext, ct);
+
+        // Validate uploaded files
+        var fileValidationResult = ValidateUploadedFiles(files, deps.Logger);
+        if (fileValidationResult is not null)
+            return fileValidationResult;
+
+        // Validate request
+        var validationResult = await deps.Validator.ValidateAsync(request, ct);
+        if (!validationResult.IsValid)
+        {
+            deps.OperationLogger.LogValidationFailure("CreateProduct", request, validationResult.Errors);
+            return Results.ValidationProblem(validationResult.ToDictionary());
+        }
+
+        // Create product
+        var product = await deps.Repository.CreateAsync(request);
+        
+        // Upload images if provided
+        if (files is not null && files.Count > 0)
+        {
+            await UploadProductImagesAsync(product.Id, files, deps.Repository, deps.ImageStorage, deps.Logger, ct);
+        }
+
+        // Refresh product data to include uploaded images if any
+        var createdProduct = files is not null && files.Count > 0 
+            ? await deps.Repository.GetByIdAsync(product.Id) 
+            : product;
+
+        deps.Logger.LogInformation("Product created: {ProductId}", product.Id);
+        return Results.Created($"{deps.EndpointConfig.Products.Base}/{product.Id}", createdProduct);
+    }
+
+    private static async Task<(CreateProductRequest request, IFormFileCollection? files)> ParseCreateProductRequestAsync(
+        HttpContext context,
+        CancellationToken ct)
+    {
+        if (context.Request.HasFormContentType)
+        {
+            var form = await context.Request.ReadFormAsync(ct);
+            var request = new CreateProductRequest(
+                form["name"].ToString(),
+                form["description"].ToString(),
+                decimal.TryParse(form["price"].ToString(), out var price) ? price : 0,
+                form["imageUrl"].ToString(),
+                form["category"].ToString(),
+                int.TryParse(form["stock"].ToString(), out var stock) ? stock : 0);
+            return (request, form.Files);
+        }
+
+        var jsonRequest = await context.Request.ReadFromJsonAsync<CreateProductRequest>(ct)
+            ?? throw new InvalidOperationException("Invalid request body");
+        return (jsonRequest, null);
+    }
+
+    private static IResult? ValidateUploadedFiles(IFormFileCollection? files, ILogger<Program> logger)
+    {
+        if (files is null or { Count: 0 })
+            return null;
+
+        const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            if (file.Length > maxFileSize)
+            {
+                logger.LogWarning("Uploaded file {FileName} exceeds 10 MB limit", file.FileName);
+                return Results.BadRequest(new { error = "File size cannot exceed 10 MB" });
+            }
+
+            if (!allowedTypes.Contains(file.ContentType.ToLowerInvariant()))
+            {
+                logger.LogWarning("Uploaded file {FileName} has invalid type {ContentType}", file.FileName, file.ContentType);
+                return Results.BadRequest(new { error = "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" });
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task UploadProductImagesAsync(
+        Guid productId,
+        IFormFileCollection files,
+        IProductRepository repository,
+        IImageStorageService imageStorage,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var uploadedCount = 0;
+        string? firstImageUrl = null;
+        
+        foreach (var file in files.Where(f => f.Length > 0))
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var imageUrl = await imageStorage.UploadImageAsync(stream, file.FileName, "products", ct);
+                
+                // Remember first image as thumbnail
+                if (uploadedCount == 0)
+                {
+                    firstImageUrl = imageUrl;
+                }
+                uploadedCount++;
+
+                logger.LogInformation(
+                    "Image {Count}/{Total} uploaded for product {ProductId}: {FileName}",
+                    uploadedCount, files.Count, productId, file.FileName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to upload image {FileName} for product {ProductId}", file.FileName, productId);
+            }
+        }
+
+        // Update product with first image as thumbnail if available
+        if (!string.IsNullOrEmpty(firstImageUrl))
+        {
+            var product = await repository.GetByIdAsync(productId);
+            if (product != null)
+            {
+                await repository.UpdateAsync(productId, new UpdateProductRequest(
+                    null,  // Keep existing name
+                    null,  // Keep existing description
+                    null,  // Keep existing price
+                    firstImageUrl,  // Set the first uploaded image
+                    null,  // Keep existing category
+                    null   // Keep existing stock
+                ));
+            }
+        }
+
+        if (uploadedCount > 0)
+            logger.LogInformation("Product {ProductId} created with {Count} images", productId, uploadedCount);
     }
 
     private static async Task<IResult> Update(
@@ -179,7 +332,7 @@ public static class ProductEndpoints
         if (authConfig.RequireAdminForProductUpdate && !context.User.IsInRole(SeedDataConstants.AdminRole))
         {
             logger.LogWarning("User {UserName} attempted to assign tags to product without Admin role", 
-                context.User.Identity?.Name);
+                PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -190,7 +343,7 @@ public static class ProductEndpoints
                 return Results.NotFound($"Product with ID {id} not found");
 
             logger.LogInformation("Tags assigned to product {ProductId} by {UserName}: {TagCount} tags", 
-                id, context.User.Identity?.Name, request.TagIds.Count);
+                id, PiiMask.MaskUserName(context.User.Identity?.Name), request.TagIds.Count);
             
             return Results.Ok(product);
         }
@@ -258,12 +411,12 @@ public static class ProductEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogInformation("POST /products/{ProductId}/images called by {UserName}", id, context.User.Identity?.Name);
+        logger.LogInformation("POST /products/{ProductId}/images called by {UserName}", id, PiiMask.MaskUserName(context.User.Identity?.Name));
 
         // Require admin role
         if (!context.User.IsInRole(SeedDataConstants.AdminRole))
         {
-            logger.LogWarning("User {UserName} attempted to add image to product without Admin role", context.User.Identity?.Name);
+            logger.LogWarning("User {UserName} attempted to add image to product without Admin role", PiiMask.MaskUserName(context.User.Identity?.Name));
             return Results.Forbid();
         }
 
@@ -291,7 +444,7 @@ public static class ProductEndpoints
                 return Results.NotFound(new { error = "Product not found" });
             }
 
-            logger.LogInformation("Image added to product {ProductId} by {UserName}: {ImageUrl}", id, context.User.Identity?.Name, imageUrl);
+            logger.LogInformation("Image added to product {ProductId} by {UserName}: {ImageUrl}", id, PiiMask.MaskUserName(context.User.Identity?.Name), imageUrl);
 
             // Return product with signed image URL for client consumption
             var signedImageUrl = imageStorage.GenerateSignedUrl(updated.ImageUrl, expirationMinutes: 60);

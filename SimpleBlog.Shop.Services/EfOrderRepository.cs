@@ -98,7 +98,11 @@ public sealed class EfOrderRepository(
                 await context.SaveChangesAsync();
                 return MapToModel(entity);
             },
-            new { request.CustomerEmail, request.CustomerName, ItemCount = request.Items.Count });
+            new
+            {
+                CustomerEmail = MaskEmail(request.CustomerEmail),
+                ItemCount = request.Items.Count
+            });
     }
 
     /// <summary>
@@ -142,7 +146,10 @@ public sealed class EfOrderRepository(
             async () =>
             {
                 var spec = new OrdersByCustomerEmailSpecification(customerEmail);
-                operationLogger.LogSpecificationUsage(nameof(OrdersByCustomerEmailSpecification), "Order", new { customerEmail, page, pageSize });
+                operationLogger.LogSpecificationUsage(
+                    nameof(OrdersByCustomerEmailSpecification),
+                    "Order",
+                    new { CustomerEmail = MaskEmail(customerEmail), page, pageSize });
                 
                 var total = await context.Orders.ApplySpecification(spec).CountAsync();
                 
@@ -160,7 +167,13 @@ public sealed class EfOrderRepository(
                     PageSize = pageSize
                 };
             },
-            new { customerEmail, page, pageSize, SpecName = nameof(OrdersByCustomerEmailSpecification) });
+            new
+            {
+                CustomerEmail = MaskEmail(customerEmail),
+                page,
+                pageSize,
+                SpecName = nameof(OrdersByCustomerEmailSpecification)
+            });
     }
 
     /// <summary>
@@ -304,6 +317,24 @@ public sealed class EfOrderRepository(
                 },
                 new { from, to });
         }
+
+    private static string MaskEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "unknown";
+        }
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0 || atIndex == email.Length - 1)
+        {
+            return "unknown";
+        }
+
+        var firstChar = email[..1];
+        var domain = email[(atIndex + 1)..];
+        return $"{firstChar}***@{domain}";
+    }
 
     private static Order MapToModel(OrderEntity entity) =>
         new(

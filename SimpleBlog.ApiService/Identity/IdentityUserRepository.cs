@@ -32,7 +32,7 @@ internal sealed class IdentityUserRepository : IUserRepository
 
         if (!await _userManager.CheckPasswordAsync(user, password))
         {
-            _logger.LogWarning("Failed password check for user {Username}", username);
+            _logger.LogWarning("Failed password check for user {Username}", MaskUserName(username));
             return null;
         }
 
@@ -66,22 +66,23 @@ internal sealed class IdentityUserRepository : IUserRepository
             EmailConfirmed = true
         };
 
+        var maskedUsername = MaskUserName(username);
         var createResult = await _userManager.CreateAsync(newUser, password);
         if (!createResult.Succeeded)
         {
             var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-            _logger.LogWarning("Failed to create user {Username}: {Errors}", username, errors);
+            _logger.LogWarning("Failed to create user {Username}: {Errors}", maskedUsername, errors);
             return (false, errors);
         }
 
         var roleResult = await _userManager.AddToRoleAsync(newUser, "User");
         if (!roleResult.Succeeded)
         {
-            _logger.LogWarning("Failed to assign user role to {Username}", username);
+            _logger.LogWarning("Failed to assign user role to {Username}", maskedUsername);
             return (false, "Failed to assign default role");
         }
 
-        _logger.LogInformation("User {Username} registered successfully", username);
+        _logger.LogInformation("User {Username} registered successfully", maskedUsername);
         return (true, null);
     }
 
@@ -131,5 +132,151 @@ internal sealed class IdentityUserRepository : IUserRepository
         var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault() ?? "User";
         return new User(user.UserName ?? username, user.Email ?? string.Empty, role);
+    }
+
+    public async Task<(string? Token, string? Error)> GeneratePasswordResetTokenAsync(string email)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        
+        var maskedEmail = MaskEmail(email);
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            // Return neutral response for security (prevent email enumeration)
+            _logger.LogWarning("Password reset requested for non-existent email: {Email}", maskedEmail);
+            return (null, null);
+        }
+
+        try
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            _logger.LogInformation("Password reset token generated for user {UserId}", user.Id);
+            return (token, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating password reset token for user {UserId}", user.Id);
+            return (null, "An error occurred while generating the reset token");
+        }
+    }
+
+    public async Task<(bool Success, string? Error)> ResetPasswordAsync(string userId, string token, string newPassword)
+    {
+        ArgumentNullException.ThrowIfNull(userId);
+        ArgumentNullException.ThrowIfNull(token);
+        ArgumentNullException.ThrowIfNull(newPassword);
+
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                _logger.LogWarning("Password reset attempted for non-existent user: {UserId}", userId);
+                return (false, "Invalid reset token");
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning("Failed to reset password for user {UserId}: {Errors}", userId, errors);
+                return (false, "Invalid or expired reset token");
+            }
+
+            _logger.LogInformation("Password successfully reset for user {UserId}", userId);
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
+            return (false, "An error occurred while resetting your password");
+        }
+    }
+
+    public async Task<(string? Token, string? Error)> GenerateEmailConfirmationTokenAsync(string email)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+
+        var maskedEmail = MaskEmail(email);
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            _logger.LogWarning("Email confirmation token requested for non-existent email: {Email}", maskedEmail);
+            return (null, null);
+        }
+
+        try
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            _logger.LogInformation("Email confirmation token generated for user {UserId}", user.Id);
+            return (token, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating email confirmation token for user {UserId}", user.Id);
+            return (null, "An error occurred while generating the confirmation token");
+        }
+    }
+
+    public async Task<(bool Success, string? Error)> ConfirmEmailAsync(string userId, string token)
+    {
+        ArgumentNullException.ThrowIfNull(userId);
+        ArgumentNullException.ThrowIfNull(token);
+
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                _logger.LogWarning("Email confirmation attempted for non-existent user: {UserId}", userId);
+                return (false, "Invalid confirmation token");
+            }
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning("Failed to confirm email for user {UserId}: {Errors}", userId, errors);
+                return (false, "Invalid or expired confirmation token");
+            }
+
+            _logger.LogInformation("Email successfully confirmed for user {UserId}", userId);
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error confirming email for user {UserId}", userId);
+            return (false, "An error occurred while confirming your email");
+        }
+    }
+
+    private static string MaskUserName(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return "unknown";
+        }
+
+        return username.Length <= 2
+            ? $"{username[0]}*"
+            : $"{username[..1]}***";
+    }
+
+    private static string MaskEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "unknown";
+        }
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0 || atIndex == email.Length - 1)
+        {
+            return "unknown";
+        }
+
+        var firstChar = email[..1];
+        var domain = email[(atIndex + 1)..];
+        return $"{firstChar}***@{domain}";
     }
 }
